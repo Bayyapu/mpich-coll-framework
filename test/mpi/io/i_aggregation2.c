@@ -95,5 +95,5 @@ int main(int argc, char **argv)
     MPI_Info_free(&info);
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

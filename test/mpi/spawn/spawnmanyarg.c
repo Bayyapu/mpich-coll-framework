@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
             errs += worker(argc, argv, parentcomm, outargv, np);
             MPI_Comm_free(&parentcomm);
             MPI_Finalize();
-            return 0;
+            return errs != 0;
         }
 
         /* Note that the MTest_Finalize get errs only over COMM_WORLD */
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     }
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 
 /* Call this routine if this process is the spawned child */

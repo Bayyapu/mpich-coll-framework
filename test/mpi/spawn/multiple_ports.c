@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     if (size < 3) {
         printf("Three processes needed to run this test.\n");
         MPI_Finalize();
-        return 0;
+        return 1;
     }
 
     if (rank == 0) {

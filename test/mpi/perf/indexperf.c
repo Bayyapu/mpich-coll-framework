@@ -183,5 +183,5 @@ int main(int argc, char **argv)
     free(index_displacement);
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

@@ -62,7 +62,7 @@ void reset_vars(TYPE_C * val_ptr, TYPE_C * res_ptr, MPI_Win win)
 int main(int argc, char **argv)
 {
     int i, rank, nproc, mpi_type_size;
-    int errors = 0, all_errors = 0;
+    int errors = 0, errs = 0;
     TYPE_C *val_ptr, *res_ptr;
     MPI_Win win;
 
@@ -320,14 +320,14 @@ int main(int argc, char **argv)
 
     MPI_Win_free(&win);
 
-    MPI_Reduce(&errors, &all_errors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&errors, &errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 0 && all_errors == 0)
+    if (rank == 0 && errs == 0)
         printf(" No Errors\n");
 
     free(val_ptr);
     free(res_ptr);
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

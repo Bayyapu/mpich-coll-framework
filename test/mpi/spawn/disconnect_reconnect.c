@@ -175,5 +175,5 @@ int main(int argc, char *argv[])
 
     IF_VERBOSE(("[%d] calling finalize\n", rank));
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

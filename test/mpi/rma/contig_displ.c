@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 
     MTest_Finalize(errs);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 
   err_return:
     printf("MPI function error returned an error\n");

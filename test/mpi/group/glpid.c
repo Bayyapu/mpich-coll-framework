@@ -41,5 +41,5 @@ int main(int argc, char *argv[])
     }
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

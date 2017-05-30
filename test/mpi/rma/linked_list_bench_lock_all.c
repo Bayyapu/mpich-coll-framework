@@ -84,6 +84,7 @@ int main(int argc, char **argv)
     double time;
     MPI_Win llist_win;
     llist_ptr_t head_ptr, tail_ptr;
+    int errs = 0;
 
     MPI_Init(&argc, &argv);
 
@@ -189,7 +190,6 @@ int main(int argc, char **argv)
     /* Traverse the list and verify that all processes inserted exactly the correct
      * number of elements. */
     if (procid == 0) {
-        int errors = 0;
         int *counts, count = 0;
 
         counts = (int *) malloc(sizeof(int) * nproc);
@@ -241,11 +241,11 @@ int main(int argc, char **argv)
             if (counts[i] != expected) {
                 printf("Error: Rank %d inserted %d elements, expected %d\n", i, counts[i],
                        expected);
-                errors++;
+                errs++;
             }
         }
 
-        printf("%s\n", errors == 0 ? " No Errors" : "FAIL");
+        printf("%s\n", errs == 0 ? " No Errors" : "FAIL");
         free(counts);
     }
 
@@ -267,5 +267,5 @@ int main(int argc, char **argv)
         MPI_Free_mem(my_elems[my_elems_count - 1]);
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

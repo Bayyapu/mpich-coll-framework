@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
         printf("Aborting further tests to avoid hanging in MPI_Wait\n");
         MTest_Finalize(errs);
         MPI_Finalize();
-        return 0;
+        return errs != 0;
     }
     if (!StatusEmpty(&s)) {
         errs++;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
         printf("Aborting further tests to avoid hanging in MPI_Wait\n");
         MTest_Finalize(errs);
         MPI_Finalize();
-        return 0;
+        return errs != 0;
     }
     if (!StatusEmpty(&s)) {
         errs++;
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
         printf("Aborting further tests to avoid hanging in MPI_Wait\n");
         MTest_Finalize(errs);
         MPI_Finalize();
-        return 0;
+        return errs != 0;
     }
     if (!StatusEmpty(&s)) {
         errs++;
@@ -163,5 +163,5 @@ int main(int argc, char *argv[])
 
     MTest_Finalize(errs);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

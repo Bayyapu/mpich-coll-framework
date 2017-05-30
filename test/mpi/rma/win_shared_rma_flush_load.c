@@ -164,7 +164,7 @@ static int run_test()
 int main(int argc, char *argv[])
 {
     int i;
-    int errors = 0, all_errors = 0;
+    int errors = 0, errs = 0;
     MPI_Comm shm_comm = MPI_COMM_NULL;
     int shm_rank;
     int *shm_ranks = NULL, *shm_root_ranks = NULL;
@@ -272,11 +272,11 @@ int main(int argc, char *argv[])
     MPI_Win_unlock_all(shm_win);
     MPI_Win_unlock_all(win);
 
-    MPI_Reduce(&errors, &all_errors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&errors, &errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
   exit:
 
-    if (rank == 0 && all_errors == 0)
+    if (rank == 0 && errs == 0)
         printf(" No Errors\n");
 
     if (shm_ranks)
@@ -295,5 +295,5 @@ int main(int argc, char *argv[])
 
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

@@ -27,6 +27,7 @@ int main(int argc, char **argv)
     MPI_Datatype types[3];
     MPI_Datatype struct_type, contig;
     MPI_Status status;
+    int errs = 0;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -74,6 +75,7 @@ int main(int argc, char **argv)
 
     if (count != 3) {
         printf("unexpected value for count, expected 3, got %d\n", count);
+        errs++;
     }
     else {
         if (rank == 0) {
@@ -82,5 +84,5 @@ int main(int argc, char **argv)
     }
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

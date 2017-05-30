@@ -228,5 +228,5 @@ int main(int argc, char **argv)
     if (mynod)
         free(filename);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

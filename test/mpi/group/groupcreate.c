@@ -14,6 +14,7 @@ int main(int argc, char **argv)
     int group_size;
     MPI_Group *group_array, world_group;
     char msg[MPI_MAX_ERROR_STRING];
+    int errs = 0;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -37,6 +38,7 @@ int main(int argc, char **argv)
             MPI_Error_string(rc, msg, &len);
             fprintf(stderr, "%s\n", msg);
             n = i + 1;
+            errs++;
             break;
         }
         else {
@@ -46,6 +48,7 @@ int main(int argc, char **argv)
             if (group_size != size) {
                 fprintf(stderr, "Group number %d not correct (size = %d)\n", i, size);
                 n = i + 1;
+                errs++;
                 break;
             }
         }
@@ -58,6 +61,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error when freeing group number %d\n", i);
             MPI_Error_string(rc, msg, &len);
             fprintf(stderr, "%s\n", msg);
+            errs++;
             break;
         }
     }
@@ -72,6 +76,7 @@ int main(int argc, char **argv)
             printf("This MPI implementation limits the number of groups that can be created\n\
 This is allowed by the standard and is not a bug, but is a limit on the\n\
 implementation\n");
+            errs++;
         }
         else {
             printf(" No Errors\n");
@@ -82,5 +87,5 @@ implementation\n");
     free(ranks);
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

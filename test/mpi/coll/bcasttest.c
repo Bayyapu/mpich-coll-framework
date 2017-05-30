@@ -19,7 +19,7 @@ int main(int argc, char **argv)
     int i, rank, reps, n;
     int bVerify = 1;
     int sizes[NUM_SIZES] = { 100, 64 * 1024, 128 * 1024, 1024 * 1024 };
-    int num_errors = 0;
+    int errs = 0;
 
     MTest_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -62,19 +62,19 @@ int main(int argc, char **argv)
             MPI_Bcast(buf, sizes[n], MPI_INT, ROOT, MPI_COMM_WORLD);
 
             if (bVerify) {
-                num_errors = 0;
+                errs = 0;
                 for (i = 0; i < sizes[n]; i++) {
                     if (buf[i] != 1000000 * (n * NUM_REPS + reps) + i) {
-                        num_errors++;
-                        if (num_errors < 10) {
+                        errs++;
+                        if (errs < 10) {
                             printf("Error: Rank=%d, n=%d, reps=%d, i=%d, buf[i]=%d expected=%d\n",
                                    rank, n, reps, i, buf[i], 1000000 * (n * NUM_REPS + reps) + i);
                             fflush(stdout);
                         }
                     }
                 }
-                if (num_errors >= 10) {
-                    printf("Error: Rank=%d, num_errors = %d\n", rank, num_errors);
+                if (errs >= 10) {
+                    printf("Error: Rank=%d, errs = %d\n", rank, errs);
                     fflush(stdout);
                 }
             }
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
     free(buf);
 
-    MTest_Finalize(num_errors);
+    MTest_Finalize(errs);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

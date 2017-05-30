@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     int i, rank, nproc;
     int shm_rank, shm_nproc, last_shm_rank_w;
     MPI_Aint size;
-    int errors = 0, all_errors = 0;
+    int errors = 0, errs = 0;
     int **bases = NULL, *abs_base, *my_base;
     int disp_unit;
     MPI_Win shm_win;
@@ -106,11 +106,11 @@ int main(int argc, char **argv)
     MPI_Win_unlock_all(shm_win);
     MPI_Win_free(&shm_win);
 
-    MPI_Reduce(&errors, &all_errors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&errors, &errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
   exit:
 
-    if (rank == 0 && all_errors == 0)
+    if (rank == 0 && errs == 0)
         printf(" No Errors\n");
 
     MPI_Comm_free(&shm_comm);
@@ -120,5 +120,5 @@ int main(int argc, char **argv)
     if (bases)
         free(bases);
 
-    return 0;
+    return errs != 0;
 }

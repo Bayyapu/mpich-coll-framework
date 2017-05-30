@@ -154,5 +154,5 @@ int main(int argc, char **argv)
             printf(" No errors\n");
     }
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

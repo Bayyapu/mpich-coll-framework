@@ -114,7 +114,7 @@ int TestVecPackDouble(int n, int stride,
         *avgTimeMPI = 0;
         if (verbose)
             printf("Too much noise; discarding measurement\n");
-        return 0;
+        return errs != 0;
     }
     *avgTimeUser = mean(t, NTRIALS) / N_REPS;
 
@@ -150,7 +150,7 @@ int TestVecPackDouble(int n, int stride,
 
     MPI_Type_free(&vectype);
 
-    return 0;
+    return errs != 0;
 }
 
 /* Test unpacking a vector of individual doubles */
@@ -194,7 +194,7 @@ int TestVecUnPackDouble(int n, int stride,
         *avgTimeMPI = 0;
         if (verbose)
             printf("Too much noise; discarding measurement\n");
-        return 0;
+        return errs != 0;
     }
     *avgTimeUser = mean(t, NTRIALS) / N_REPS;
 
@@ -231,7 +231,7 @@ int TestVecUnPackDouble(int n, int stride,
 
     MPI_Type_free(&vectype);
 
-    return 0;
+    return errs != 0;
 }
 
 /* Test packing a vector of 2-individual doubles */
@@ -276,7 +276,7 @@ int TestVecPack2Double(int n, int stride,
         *avgTimeMPI = 0;
         if (verbose)
             printf("Too much noise; discarding measurement\n");
-        return 0;
+        return errs != 0;
     }
     *avgTimeUser = mean(t, NTRIALS) / N_REPS;
 
@@ -312,7 +312,7 @@ int TestVecPack2Double(int n, int stride,
     }
     MPI_Type_free(&vectype);
 
-    return 0;
+    return errs != 0;
 }
 
 /* This creates an indexed type that is like a vector (for simplicity
@@ -364,7 +364,7 @@ int TestIndexPackDouble(int n, int stride,
         *avgTimeMPI = 0;
         if (verbose)
             printf("Too much noise; discarding measurement\n");
-        return 0;
+        return errs != 0;
     }
     *avgTimeUser = mean(t, NTRIALS) / N_REPS;
 
@@ -402,7 +402,7 @@ int TestIndexPackDouble(int n, int stride,
     }
     MPI_Type_free(&indextype);
 
-    return 0;
+    return errs != 0;
 }
 
 int Report(const char *name, const char *packname, double avgTimeMPI, double avgTimeUser);
@@ -487,5 +487,5 @@ int main(int argc, char *argv[])
     fflush(stdout);
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

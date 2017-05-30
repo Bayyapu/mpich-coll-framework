@@ -80,7 +80,7 @@ int main(int argc, char **argv)
         printf(" No Errors\n");
     }
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 
 /* builtin_float_test()
@@ -280,7 +280,7 @@ int vector_of_vectors_test(void)
     MPI_Type_free(&inner_vector);
     MPI_Type_free(&outer_vector);
 
-    return 0;
+    return errs != 0;
 }
 
 /* optimizable_vector_of_basics_test()
@@ -653,7 +653,7 @@ int indexed_of_vectors_test(void)
     MPI_Type_free(&inner_vector);
     MPI_Type_free(&outer_indexed);
 
-    return 0;
+    return errs != 0;
 }
 
 

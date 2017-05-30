@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     errs = test_attrs();
     MTest_Finalize(errs);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 
 /*

@@ -58,5 +58,5 @@ int main(int argc, char *argv[])
     fflush(stdout);
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

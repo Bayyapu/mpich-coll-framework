@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     if (size < 2) {
         printf("Two processes needed.\n");
         MPI_Finalize();
-        return 0;
+        return 1;
     }
 
     if (rank == 0) {

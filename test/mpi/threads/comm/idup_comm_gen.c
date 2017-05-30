@@ -153,5 +153,5 @@ int main(int argc, char **argv)
     }
     MTest_Finalize(toterrs);
     MPI_Finalize();
-    return 0;
+    return toterrs != 0;
 }

@@ -222,5 +222,5 @@ int main(int argc, char *argv[])
     free(rmabuf);
     MTest_Finalize(errs);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

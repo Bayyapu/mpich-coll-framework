@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     if (sizeof(void *) < 8) {
         MTest_Finalize(errs);
         MPI_Finalize();
-        return 0;
+        return errs != 0;
     }
 
     ierr = MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
         errs++;
         MTest_Finalize(errs);
         MPI_Finalize();
-        return 0;
+        return errs != 0;
     }
 
     MPI_Type_vector(elems / 2, 1, 2, MPI_LONG_LONG_INT, &dtype);
@@ -78,5 +78,5 @@ int main(int argc, char *argv[])
 
     MTest_Finalize(errs);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

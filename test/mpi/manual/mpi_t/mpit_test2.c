@@ -189,7 +189,7 @@ int main(int argc, char **argv)
     MPI_T_finalize();
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }
 #else
 /* Simple null program to allow building this file with non-MPICH
@@ -199,6 +199,6 @@ int main(int argc, char **argv)
     MPI_Init(&argc, &argv);
     printf(" No Errors\n");
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 #endif

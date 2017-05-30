@@ -47,5 +47,5 @@ int main(int argc, char **argv)
 
     fprintf(stdout, "%d:child exiting.\n", my_rank);
     fflush(stdout);
-    return 0;
+    return errs != 0;
 }

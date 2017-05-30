@@ -20,7 +20,7 @@
 static void verbose_abort(int errorcode)
 {
     int rank;
-    char errorstring[MPI_MAX_ERROR_STRING];
+    char errstring[MPI_MAX_ERROR_STRING];
     int errorclass;
     int resultlen;
 
@@ -29,10 +29,10 @@ static void verbose_abort(int errorcode)
      * all of them might fail. */
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Error_class(errorcode, &errorclass);
-    MPI_Error_string(errorcode, errorstring, &resultlen);
+    MPI_Error_string(errorcode, errstring, &resultlen);
 
-    memset(errorstring, 0, MPI_MAX_ERROR_STRING);       /* optional */
-    fprintf(stderr, "%d: MPI failed (%d: %s) \n", rank, errorclass, errorstring);
+    memset(errstring, 0, MPI_MAX_ERROR_STRING);       /* optional */
+    fprintf(stderr, "%d: MPI failed (%d: %s) \n", rank, errorclass, errstring);
     fflush(stderr);     /* almost certainly redundant with the following... */
 
     MPI_Abort(MPI_COMM_WORLD, errorclass);
@@ -117,6 +117,8 @@ int main(int argc, char *argv[])
     char *rbuf = NULL;
     char *sbuf = NULL;
 
+    int errs = 0;
+
     MPI_ASSERT(MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided));
 
     MPI_ASSERT(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
@@ -160,15 +162,15 @@ int main(int argc, char *argv[])
 
     /* correctness check */
     if (rank == (size - 1)) {
-        MPI_Count j, errors = 0;
+        MPI_Count j = 0;
         for (j = 0; j < count; j++)
-            errors += (rbuf[j] != 'z');
-        if (count != ocount) ++errors;
-        if (errors == 0) {
+            errs += (rbuf[j] != 'z');
+        if (count != ocount) ++errs;
+        if (errs == 0) {
             printf(" No Errors\n");
         }
         else {
-            printf("errors = %lld \n", errors);
+            printf("errs = %lld \n", errs);
         }
     }
 
@@ -181,5 +183,5 @@ int main(int argc, char *argv[])
 
     MPI_ASSERT(MPI_Finalize());
 
-    return 0;
+    return errs != 0;
 }

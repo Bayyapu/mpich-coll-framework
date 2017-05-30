@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    return 0;
+    return errs != 0;
 }
 
 int ReportErr(int errcode, const char name[])

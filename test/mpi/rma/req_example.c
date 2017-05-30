@@ -37,7 +37,7 @@ void compute(int step, double *data)
 int main(int argc, char *argv[])
 {
     int i, rank, nproc;
-    int errors = 0, all_errors = 0;
+    int errors = 0, errs = 0;
     MPI_Win win;
     MPI_Request put_req[M] = { MPI_REQUEST_NULL };
     MPI_Request get_req;
@@ -91,12 +91,12 @@ int main(int argc, char *argv[])
 
     MPI_Info_free(&win_info);
 
-    MPI_Reduce(&errors, &all_errors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&errors, &errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 0 && all_errors == 0)
+    if (rank == 0 && errs == 0)
         printf(" No Errors\n");
 
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

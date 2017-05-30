@@ -89,7 +89,7 @@ int main(int argc, char **argv)
         printf(" No Errors\n");
 #endif
 
-    return 0;
+    return errs != 0;
 }
 
 int delete_fn(MPI_Comm comm, int keyval, void *attribute_val, void *extra_state)

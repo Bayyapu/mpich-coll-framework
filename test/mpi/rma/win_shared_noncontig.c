@@ -20,7 +20,7 @@ int main(int argc, char **argv)
     int i, j, rank, nproc;
     int shm_rank, shm_nproc;
     MPI_Info alloc_shared_info;
-    int errors = 0, all_errors = 0;
+    int errors = 0, errs = 0;
     int disp_unit;
     int *my_base;
     MPI_Win shm_win;
@@ -77,12 +77,12 @@ int main(int argc, char **argv)
 
     MPI_Info_free(&alloc_shared_info);
 
-    MPI_Reduce(&errors, &all_errors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&errors, &errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 0 && all_errors == 0)
+    if (rank == 0 && errs == 0)
         printf(" No Errors\n");
 
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

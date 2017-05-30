@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     MTest_Finalize(errs);
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 
 /* this test allocates 1024 indexed datatypes with 1024 distinct blocks

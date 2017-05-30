@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
         else
             printf(" Found %d errors\n", errs);
     }
-    return 0;
+    return errs != 0;
 
 }
 

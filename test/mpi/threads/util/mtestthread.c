@@ -51,7 +51,7 @@ int MTest_Start_thread(MTEST_THREAD_RETURN_TYPE(*fn) (void *p), void *arg)
     else {
         nthreads++;
     }
-    return 0;
+    return errs != 0;
 }
 
 int MTest_Join_threads(void)
@@ -82,7 +82,7 @@ int MTest_thread_lock_create(MTEST_THREAD_LOCK_TYPE * lock)
     if (*lock == NULL)
         return -1;
 
-    return 0;
+    return errs != 0;
 }
 
 int MTest_thread_lock(MTEST_THREAD_LOCK_TYPE * lock)
@@ -94,7 +94,7 @@ int MTest_thread_lock(MTEST_THREAD_LOCK_TYPE * lock)
     if (WaitForSingleObject(*lock, INFINITE) != WAIT_OBJECT_0) {
         return -1;
     }
-    return 0;
+    return errs != 0;
 }
 
 int MTest_thread_unlock(MTEST_THREAD_LOCK_TYPE * lock)
@@ -104,7 +104,7 @@ int MTest_thread_unlock(MTEST_THREAD_LOCK_TYPE * lock)
     if (ReleaseMutex(*lock) == 0) {
         return -1;
     }
-    return 0;
+    return errs != 0;
 }
 
 int MTest_thread_lock_free(MTEST_THREAD_LOCK_TYPE * lock)
@@ -114,7 +114,7 @@ int MTest_thread_lock_free(MTEST_THREAD_LOCK_TYPE * lock)
             return -1;
         }
     }
-    return 0;
+    return errs != 0;
 }
 
 #else

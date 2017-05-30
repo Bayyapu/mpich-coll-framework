@@ -187,5 +187,5 @@ int main(int argc, char **argv)
     free(outbuf2);
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

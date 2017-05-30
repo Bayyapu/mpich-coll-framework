@@ -92,5 +92,5 @@ int main(int argc, char *argv[])
 
     if (errs == 0)
         fprintf(stdout, " No Errors\n");
-    return 0;
+    return errs != 0;
 }

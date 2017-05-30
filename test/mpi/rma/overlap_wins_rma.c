@@ -258,7 +258,7 @@ static void destroy_windows(void)
 
 int main(int argc, char *argv[])
 {
-    int errors = 0, all_errors = 0;
+    int errors = 0, errs = 0;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -290,9 +290,9 @@ int main(int argc, char *argv[])
     errors = run_test();
 
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Reduce(&errors, &all_errors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&errors, &errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 0 && all_errors == 0) {
+    if (rank == 0 && errs == 0) {
         fprintf(stdout, " No Errors\n");
         fflush(stdout);
     }
@@ -300,5 +300,5 @@ int main(int argc, char *argv[])
     destroy_windows();
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

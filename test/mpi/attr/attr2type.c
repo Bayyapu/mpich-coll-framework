@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
     int mpi_errno;
     MPI_Datatype type, duptype;
     int rank;
+    int errs = 0;
 
     MPI_Init(&argc, &argv);
 
@@ -50,7 +51,6 @@ int main(int argc, char *argv[])
     foo_finalize();
 
     if (rank == 0) {
-        int errs = 0;
         if (copy_called != 1) {
             printf("Copy called %d times; expected once\n", copy_called);
             errs++;
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     }
 
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 
 int foo_copy_attr_function(MPI_Datatype type,

@@ -18,7 +18,7 @@ const int verbose = 0;
 int main(int argc, char **argv)
 {
     int i, rank, nproc;
-    int errors = 0, all_errors = 0;
+    int errors = 0, errs = 0;
     int val = 0, one = 1;
     int iter;
     MPI_Aint *val_ptrs;
@@ -57,13 +57,13 @@ int main(int argc, char **argv)
     MPI_Win_detach(dyn_win, &val);
     MPI_Win_free(&dyn_win);
 
-    MPI_Reduce(&errors, &all_errors, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&errors, &errs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (rank == 0 && all_errors == 0)
+    if (rank == 0 && errs == 0)
         printf(" No Errors\n");
 
     free(val_ptrs);
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }

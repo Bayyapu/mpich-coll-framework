@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 
     MTest_Finalize(errs);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 
 int copy_fn(MPI_Comm oldcomm, int keyval, void *extra_state,

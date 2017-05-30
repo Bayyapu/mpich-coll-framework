@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     MTest_Finalize(errs);
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }
 
 void comm_tests(MPI_Comm comm)
@@ -213,7 +213,7 @@ double run_test(long long msg_size, MPI_Comm comm, test_t test_type, double *max
 
             /* If the maximum message size is too large, don't run */
             if (tmp > MAX_BUF)
-                return 0;
+                return errs != 0;
         }
         else if (test_type == BELL_CURVE) {
             for (j = 0; j < i; j++) {
@@ -225,7 +225,7 @@ double run_test(long long msg_size, MPI_Comm comm, test_t test_type, double *max
 
                 /* If the maximum message size is too large, don't run */
                 if (tmp > MAX_BUF)
-                    return 0;
+                    return errs != 0;
             }
         }
 

@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 
     MPI_T_finalize();
 
-    return 0;
+    return errs != 0;
 }
 
 #else
@@ -115,6 +115,6 @@ int main(int argc, char **argv)
     MPI_Init(&argc, &argv);
     printf(" No Errors\n");
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }
 #endif

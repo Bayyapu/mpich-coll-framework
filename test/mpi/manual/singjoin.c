@@ -194,7 +194,7 @@ int parse_args(int argc, char **argv)
         usage(argv[0]);
         return -1;
     }
-    return 0;
+    return errs != 0;
 #else
     int arg_cnt = 1;
     int c;
@@ -222,7 +222,7 @@ int parse_args(int argc, char **argv)
         usage(argv[0]);
         return -1;
     }
-    return 0;
+    return errs != 0;
 #endif
 }
 
@@ -285,5 +285,5 @@ int main(int argc, char **argv)
     MPI_Comm_free(&intracomm);
     MPI_Comm_disconnect(&intercomm);
     MPI_Finalize();
-    return 0;
+    return errs != 0;
 }

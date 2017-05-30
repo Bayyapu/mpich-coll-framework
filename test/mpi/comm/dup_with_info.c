@@ -69,7 +69,7 @@ int run_tests(MPI_Comm comm)
 
 int main(int argc, char **argv)
 {
-    int total_errs = 0;
+    int errs = 0;
     MPI_Comm newcomm;
     MPI_Info info;
 
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 
     /* Dup with no info */
     MPI_Comm_dup_with_info(MPI_COMM_WORLD, MPI_INFO_NULL, &newcomm);
-    total_errs += run_tests(newcomm);
+    errs += run_tests(newcomm);
     MPI_Comm_free(&newcomm);
 
     /* Dup with info keys */
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     MPI_Info_set(info, (char *) "file", (char *) "runfile.txt");
     MPI_Info_set(info, (char *) "soft", (char *) "2:1000:4,3:1000:7");
     MPI_Comm_dup_with_info(MPI_COMM_WORLD, info, &newcomm);
-    total_errs += run_tests(newcomm);
+    errs += run_tests(newcomm);
     MPI_Info_free(&info);
     MPI_Comm_free(&newcomm);
 
@@ -97,12 +97,12 @@ int main(int argc, char **argv)
     MPI_Info_set(info, (char *) "soft", (char *) "2:1000:4,3:1000:7");
     MPI_Comm_dup_with_info(MPI_COMM_WORLD, info, &newcomm);
     MPI_Info_free(&info);
-    total_errs += run_tests(newcomm);
+    errs += run_tests(newcomm);
     MPI_Comm_free(&newcomm);
 
-    MTest_Finalize(total_errs);
+    MTest_Finalize(errs);
 
     MPI_Finalize();
 
-    return 0;
+    return errs != 0;
 }
