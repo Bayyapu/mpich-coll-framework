@@ -590,7 +590,7 @@ int MPI_Ialltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
     /* Validate parameters, especially handles needing to be converted */
 #   ifdef HAVE_ERROR_CHECKING
     {
-        MPID_BEGIN_ERROR_CHECKS
+        MPID_BEGIN_ERROR_CHECKS;
         {
             if (sendbuf != MPI_IN_PLACE) {
                 MPIR_ERRTEST_COUNT(sendcount, mpi_errno);
@@ -602,7 +602,7 @@ int MPI_Ialltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
             /* TODO more checks may be appropriate */
         }
-        MPID_END_ERROR_CHECKS
+        MPID_END_ERROR_CHECKS;
     }
 #   endif /* HAVE_ERROR_CHECKING */
 
@@ -612,7 +612,7 @@ int MPI_Ialltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
     /* Validate parameters and objects (post conversion) */
 #   ifdef HAVE_ERROR_CHECKING
     {
-        MPID_BEGIN_ERROR_CHECKS
+        MPID_BEGIN_ERROR_CHECKS;
         {
             MPIR_Comm_valid_ptr( comm_ptr, mpi_errno, FALSE );
             if (mpi_errno != MPI_SUCCESS) goto fn_fail;
@@ -645,7 +645,7 @@ int MPI_Ialltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
                 MPIR_ERRTEST_ALIAS_COLL(sendbuf,recvbuf,mpi_errno);
             /* TODO more checks may be appropriate (counts, in_place, etc) */
         }
-        MPID_END_ERROR_CHECKS
+        MPID_END_ERROR_CHECKS;
     }
 #   endif /* HAVE_ERROR_CHECKING */
 

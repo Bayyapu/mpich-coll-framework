@@ -191,7 +191,7 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
     /* Validate parameters, especially handles needing to be converted */
 #   ifdef HAVE_ERROR_CHECKING
     {
-        MPID_BEGIN_ERROR_CHECKS
+        MPID_BEGIN_ERROR_CHECKS;
         {
             MPIR_ERRTEST_DATATYPE(sendtype, "sendtype", mpi_errno);
             if (recvbuf != MPI_IN_PLACE)
@@ -200,7 +200,7 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
 
             /* TODO more checks may be appropriate */
         }
-        MPID_END_ERROR_CHECKS
+        MPID_END_ERROR_CHECKS;
     }
 #   endif /* HAVE_ERROR_CHECKING */
 
@@ -210,7 +210,7 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
     /* Validate parameters and objects (post conversion) */
 #   ifdef HAVE_ERROR_CHECKING
     {
-        MPID_BEGIN_ERROR_CHECKS
+        MPID_BEGIN_ERROR_CHECKS;
         {
             MPIR_Datatype *sendtype_ptr=NULL, *recvtype_ptr=NULL;
             int i, comm_size, rank;
@@ -312,7 +312,7 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
 
             if (mpi_errno != MPI_SUCCESS) goto fn_fail;
         }
-        MPID_END_ERROR_CHECKS
+        MPID_END_ERROR_CHECKS;
     }
 #   endif /* HAVE_ERROR_CHECKING */
 

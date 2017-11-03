@@ -595,7 +595,7 @@ int MPI_Igather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
     /* Validate parameters, especially handles needing to be converted */
 #   ifdef HAVE_ERROR_CHECKING
     {
-        MPID_BEGIN_ERROR_CHECKS
+        MPID_BEGIN_ERROR_CHECKS;
         {
             MPIR_ERRTEST_COMM(comm, mpi_errno);
             if (sendbuf != MPI_IN_PLACE) {
@@ -607,7 +607,7 @@ int MPI_Igather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
             /* TODO more checks may be appropriate */
         }
-        MPID_END_ERROR_CHECKS
+        MPID_END_ERROR_CHECKS;
     }
 #   endif /* HAVE_ERROR_CHECKING */
 
@@ -617,7 +617,7 @@ int MPI_Igather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
     /* Validate parameters and objects (post conversion) */
 #   ifdef HAVE_ERROR_CHECKING
     {
-        MPID_BEGIN_ERROR_CHECKS
+        MPID_BEGIN_ERROR_CHECKS;
         {
             MPIR_Datatype *sendtype_ptr=NULL, *recvtype_ptr=NULL;
             int rank;
@@ -698,7 +698,7 @@ int MPI_Igather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
                 }
             }
         }
-        MPID_END_ERROR_CHECKS
+        MPID_END_ERROR_CHECKS;
     }
 #   endif /* HAVE_ERROR_CHECKING */
 
