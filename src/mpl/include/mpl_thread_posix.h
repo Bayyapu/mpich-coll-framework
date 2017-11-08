@@ -11,7 +11,7 @@
 #ifndef MPL_THREAD_POSIX_H_INCLUDED
 #define MPL_THREAD_POSIX_H_INCLUDED
 
-#include "mpl.h"      /* for MPL_sched_yield */
+#include "mpl.h"        /* for MPL_sched_yield */
 
 #include <errno.h>
 #include <pthread.h>

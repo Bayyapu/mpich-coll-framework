@@ -19,7 +19,7 @@ int MPII_Timer_finalize(void);
 int MPII_Describe_timer_states(void);
 
 /* structures, global variables */
-/* FIXME: All global names should follow the prefix rules to ensure that 
+/* FIXME: All global names should follow the prefix rules to ensure that
    there are no collisions with user-defined global names.  g_pRLOG should be
    RLOGI_something */
 extern RLOGI_Struct *g_pRLOG;
@@ -34,7 +34,7 @@ extern RLOGI_Struct *g_pRLOG;
 if (g_pRLOG) \
 { \
     g_pRLOG->nRecursion++; \
-    MPID_Wtime( &time_stamp_in##a ); \
+    MPID_Wtime(&time_stamp_in##a); \
 }
 
 #define RLOGI_MACRO_HEADER_CAST() ((RLOGI_HEADER*)g_pRLOG->pOutput->pCurHeader)
@@ -46,9 +46,9 @@ if (g_pRLOG) \
     if (g_pRLOG->bLogging) \
     { \
 	double d1, d2; \
-	MPID_Wtime( &time_stamp_out##a ); \
-	MPIDM_Wtime_todouble( ( &time_stamp_in##a ), &d1); \
-	MPIDM_Wtime_todouble( ( &time_stamp_out##a ), &d2); \
+	MPID_Wtime(&time_stamp_out##a); \
+	MPIDM_Wtime_todouble((&time_stamp_in##a), &d1); \
+	MPIDM_Wtime_todouble((&time_stamp_out##a), &d2); \
 	g_pRLOG->nRecursion--; \
 	if (g_pRLOG->pOutput->pCurHeader + sizeof(RLOGI_HEADER) + sizeof(RLOGI_EVENT) > g_pRLOG->pOutput->pEnd) \
 	{ \
@@ -85,37 +85,37 @@ if (g_pRLOG) \
 if (g_pRLOG) \
 { \
     g_pRLOG->nRecursion++; \
-    MPID_Wtime( &time_stamp_in##a ); \
-    RLOGI_LogSend( g_pRLOG, dest, tag, count ); \
+    MPID_Wtime(&time_stamp_in##a); \
+    RLOGI_LogSend(g_pRLOG, dest, tag, count); \
 }
 
 #define RLOG_PT2PT_FUNC_ENTER_BACK(a) \
 if (g_pRLOG) \
 { \
     g_pRLOG->nRecursion++; \
-    MPID_Wtime( &time_stamp_in##a ); \
-    RLOGI_LogRecv( g_pRLOG, source, tag, count ); \
+    MPID_Wtime(&time_stamp_in##a); \
+    RLOGI_LogRecv(g_pRLOG, source, tag, count); \
 }
 
 #define RLOG_PT2PT_FUNC_ENTER_BOTH(a) \
 if (g_pRLOG) \
 { \
     g_pRLOG->nRecursion++; \
-    MPID_Wtime( &time_stamp_in##a ); \
-    RLOGI_LogSend( g_pRLOG, dest, sendtag, sendcount ); \
+    MPID_Wtime(&time_stamp_in##a); \
+    RLOGI_LogSend(g_pRLOG, dest, sendtag, sendcount); \
 }
 
 #define RLOG_PT2PT_FUNC_EXIT_BACK(a) \
 if (g_pRLOG) \
 { \
-    RLOGI_LogRecv( g_pRLOG, source, tag, count ); \
+    RLOGI_LogRecv(g_pRLOG, source, tag, count); \
     RLOG_PT2PT_FUNC_EXIT(a) \
 }
 
 #define RLOG_PT2PT_FUNC_EXIT_BOTH(a) \
 if (g_pRLOG) \
 { \
-    RLOGI_LogRecv( g_pRLOG, source, recvtag, recvcount ); \
+    RLOGI_LogRecv(g_pRLOG, source, recvtag, recvcount); \
     RLOG_PT2PT_FUNC_EXIT(a) \
 }
 

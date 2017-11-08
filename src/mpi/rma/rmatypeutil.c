@@ -26,19 +26,19 @@ int MPIR_Type_is_rma_atomic(MPI_Datatype type)
 #undef MPIR_OP_TYPE_MACRO
 #define MPIR_OP_TYPE_MACRO(mpi_type_, c_type_, type_name_) case mpi_type_:
         MPIR_OP_TYPE_GROUP(C_INTEGER)
-        MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER)
-        MPIR_OP_TYPE_GROUP(LOGICAL)
-        MPIR_OP_TYPE_GROUP(BYTE)
-        MPIR_OP_TYPE_GROUP(C_INTEGER_EXTRA)
-        MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER_EXTRA)
-        MPIR_OP_TYPE_GROUP(LOGICAL_EXTRA)
-        MPIR_OP_TYPE_GROUP(BYTE_EXTRA)
+            MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER)
+            MPIR_OP_TYPE_GROUP(LOGICAL)
+            MPIR_OP_TYPE_GROUP(BYTE)
+            MPIR_OP_TYPE_GROUP(C_INTEGER_EXTRA)
+            MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER_EXTRA)
+            MPIR_OP_TYPE_GROUP(LOGICAL_EXTRA)
+            MPIR_OP_TYPE_GROUP(BYTE_EXTRA)
             return TRUE;
-            break;
+        break;
 #undef MPIR_OP_TYPE_MACRO
-        default:
-            return FALSE;
-            break;
+    default:
+        return FALSE;
+        break;
     }
 }
 
@@ -60,19 +60,17 @@ int MPIR_Compare_equal(const void *a, const void *b, MPI_Datatype type)
                 return TRUE;                    \
                 break;
         MPIR_OP_TYPE_GROUP(C_INTEGER)
-        MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER)
-        MPIR_OP_TYPE_GROUP(LOGICAL)
-        MPIR_OP_TYPE_GROUP(BYTE)
-        MPIR_OP_TYPE_GROUP(C_INTEGER_EXTRA)
-        MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER_EXTRA)
-        MPIR_OP_TYPE_GROUP(LOGICAL_EXTRA)
+            MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER)
+            MPIR_OP_TYPE_GROUP(LOGICAL)
+            MPIR_OP_TYPE_GROUP(BYTE)
+            MPIR_OP_TYPE_GROUP(C_INTEGER_EXTRA)
+            MPIR_OP_TYPE_GROUP(FORTRAN_INTEGER_EXTRA)
+            MPIR_OP_TYPE_GROUP(LOGICAL_EXTRA)
 #undef MPIR_OP_TYPE_MACRO
-        default:
-            return FALSE;
-            break;
+    default:
+        return FALSE;
+        break;
     }
 
     return FALSE;
 }
-
-

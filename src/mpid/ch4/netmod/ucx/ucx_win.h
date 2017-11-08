@@ -34,7 +34,8 @@ static inline int MPIDI_UCX_Win_allgather(MPIR_Win * win, size_t length,
 
     ucp_context_h ucp_context = MPIDI_UCX_global.context;
 
-    MPIDI_UCX_WIN(win).info_table = MPL_malloc(sizeof(MPIDI_UCX_win_info_t) * comm_ptr->local_size, MPL_MEM_OTHER);
+    MPIDI_UCX_WIN(win).info_table =
+        MPL_malloc(sizeof(MPIDI_UCX_win_info_t) * comm_ptr->local_size, MPL_MEM_OTHER);
 
     /* Only non-zero region maps to device. */
     rkey_size = 0;
@@ -110,8 +111,7 @@ static inline int MPIDI_UCX_Win_allgather(MPIR_Win * win, size_t length,
                                     &(MPIDI_UCX_WIN_INFO(win, i).rkey));
         if (status == UCS_ERR_UNREACHABLE) {
             MPIDI_UCX_WIN_INFO(win, i).rkey = NULL;
-        }
-        else
+        } else
             MPIDI_UCX_CHK_STATUS(status);
     }
     share_data = MPL_malloc(comm_ptr->local_size * sizeof(struct _UCX_share), MPL_MEM_OTHER);
@@ -518,7 +518,7 @@ static inline int MPIDI_NM_mpi_win_sync(MPIR_Win * win)
 static inline int MPIDI_NM_mpi_win_flush_all(MPIR_Win * win)
 {
 
-    /*maybe we just flush all eps here? More efficient for smaller communicators...*/
+    /*maybe we just flush all eps here? More efficient for smaller communicators... */
     int mpi_errno = MPI_SUCCESS;
     ucs_status_t ucp_status;
     mpi_errno = MPIDI_CH4R_mpi_win_flush_all(win);

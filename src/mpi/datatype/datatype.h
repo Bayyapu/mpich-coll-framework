@@ -7,10 +7,10 @@
 #include "mpiimpl.h"
 
 /* Definitions private to the datatype code */
-extern int MPIR_Datatype_init( void );
-extern int MPIR_Datatype_builtin_fillin( void );
-extern int MPIR_Datatype_init_names( void );
-extern void MPIR_Datatype_iscontig( MPI_Datatype , int * );
+extern int MPIR_Datatype_init(void);
+extern int MPIR_Datatype_builtin_fillin(void);
+extern int MPIR_Datatype_init_names(void);
+extern void MPIR_Datatype_iscontig(MPI_Datatype, int *);
 
 /* LB/UB calculation helper macros */
 
@@ -42,7 +42,7 @@ do {							\
 	lb_ = old_lb_ + (old_extent_) * (cnt_ - 1);	\
 	ub_ = old_ub_;				\
     }                                                   \
-} while(0)
+} while (0)
 
 /* MPII_DATATYPE_VECTOR_LB_UB()
  *
@@ -81,7 +81,7 @@ do {								\
 	    (stride_) * ((cnt_) - 1);				\
 	ub_ = old_ub_;					\
     }								\
-} while(0)
+} while (0)
 
 /* MPII_DATATYPE_BLOCK_LB_UB()
  *
@@ -112,12 +112,13 @@ do {									\
 	lb_ = old_lb_ + (disp_) + (old_extent_) * ((cnt_) - 1);	\
 	ub_ = old_ub_ + (disp_);					\
     }									\
-} while(0)
+} while (0)
 
 /* internal debugging functions */
-void MPII_Datatype_printf(MPI_Datatype type, int depth, MPI_Aint displacement, int blocklength, int header);
-void MPII_Dataloop_dot_printf(MPIR_Dataloop *loop_p, int depth, int header);
+void MPII_Datatype_printf(MPI_Datatype type, int depth, MPI_Aint displacement, int blocklength,
+                          int header);
+void MPII_Dataloop_dot_printf(MPIR_Dataloop * loop_p, int depth, int header);
 
-void MPII_Datatype_get_contents_ints(MPIR_Datatype_contents *cp, int *user_ints);
-void MPII_Datatype_get_contents_aints(MPIR_Datatype_contents *cp, MPI_Aint *user_aints);
-void MPII_Datatype_get_contents_types(MPIR_Datatype_contents *cp, MPI_Datatype *user_types);
+void MPII_Datatype_get_contents_ints(MPIR_Datatype_contents * cp, int *user_ints);
+void MPII_Datatype_get_contents_aints(MPIR_Datatype_contents * cp, MPI_Aint * user_aints);
+void MPII_Datatype_get_contents_types(MPIR_Datatype_contents * cp, MPI_Datatype * user_types);

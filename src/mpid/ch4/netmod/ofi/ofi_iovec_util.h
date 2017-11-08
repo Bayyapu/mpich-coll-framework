@@ -117,8 +117,7 @@ static inline
     if ((origin_count > 0) && (target_count > 0)) {
         MPIDI_OFI_INIT_IOV_STATE(target);
         MPIDI_OFI_INIT_IOV_STATE(origin);
-    }
-    else
+    } else
         return MPIDI_OFI_IOV_ERROR;
 
     return MPIDI_OFI_IOV_SUCCESS;
@@ -143,8 +142,7 @@ static inline
         MPIDI_OFI_INIT_IOV_STATE(target);
         MPIDI_OFI_INIT_IOV_STATE(origin);
         MPIDI_OFI_INIT_IOV_STATE(result);
-    }
-    else
+    } else
         return MPIDI_OFI_IOV_ERROR;
 
     return MPIDI_OFI_IOV_SUCCESS;
@@ -163,8 +161,7 @@ static inline
             MPL_MIN(MPL_MIN(iov_state->target_size, iov_state->origin_size),
                     iov_state->buf_limit_left);
         return MPIDI_OFI_IOV_EAGAIN;
-    }
-    else {
+    } else {
         if (((iov_state->origin_size != 0) || (iov_state->target_size != 0)))
             return MPIDI_OFI_IOV_ERROR;
 
@@ -186,8 +183,7 @@ static inline
         *buf_len = MPL_MIN(MPL_MIN(MPL_MIN(iov_state->target_size, iov_state->origin_size),
                                    iov_state->result_size), iov_state->buf_limit_left);
         return MPIDI_OFI_IOV_EAGAIN;
-    }
-    else {
+    } else {
         if (((iov_state->origin_size != 0) || (iov_state->target_size != 0) ||
              (iov_state->result_size != 0)))
             return MPIDI_OFI_IOV_ERROR;
@@ -209,8 +205,7 @@ static inline
         MPIDI_OFI_NEXT_IOV_STATE(target);
         MPIDI_OFI_NEXT_IOV_STATE(origin);
         return MPIDI_OFI_IOV_EAGAIN;
-    }
-    else {
+    } else {
         if (((iov_state->origin_size != 0) || (iov_state->target_size != 0)))
             return MPIDI_OFI_IOV_ERROR;
 
@@ -234,8 +229,7 @@ static inline
         MPIDI_OFI_NEXT_IOV_STATE(origin);
         MPIDI_OFI_NEXT_IOV_STATE(result);
         return MPIDI_OFI_IOV_EAGAIN;
-    }
-    else {
+    } else {
         if (((iov_state->origin_size != 0) || (iov_state->target_size != 0) ||
              (iov_state->result_size != 0)))
             return MPIDI_OFI_IOV_ERROR;
@@ -285,11 +279,9 @@ static inline
 
         if (target_last_addr + last_len == target_addr) {
             MPIDI_OFI_UPDATE_IOV_STATE1(target, origin);
-        }
-        else if (origin_last_addr + last_len == origin_addr) {
+        } else if (origin_last_addr + last_len == origin_addr) {
             MPIDI_OFI_UPDATE_IOV_STATE1(origin, target);
-        }
-        else {
+        } else {
             MPIDI_OFI_UPDATE_IOV(target);
             MPIDI_OFI_UPDATE_IOV(origin);
             MPIDI_OFI_next_iovec_state(iov_state, &origin_addr, &target_addr, &len);
@@ -360,14 +352,11 @@ static inline
 
         if (target_last_addr + last_len == target_addr) {
             MPIDI_OFI_UPDATE_IOV_STATE2(target, origin, result);
-        }
-        else if (origin_last_addr + last_len == origin_addr) {
+        } else if (origin_last_addr + last_len == origin_addr) {
             MPIDI_OFI_UPDATE_IOV_STATE2(origin, target, result);
-        }
-        else if (result_last_addr + last_len == result_addr) {
+        } else if (result_last_addr + last_len == result_addr) {
             MPIDI_OFI_UPDATE_IOV_STATE2(result, target, origin);
-        }
-        else {
+        } else {
             MPIDI_OFI_UPDATE_IOV(target);
             MPIDI_OFI_UPDATE_IOV(origin);
             MPIDI_OFI_UPDATE_IOV(result);

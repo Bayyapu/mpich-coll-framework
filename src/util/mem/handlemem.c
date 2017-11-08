@@ -88,8 +88,7 @@ int MPIR_check_handles_on_finalize(void *objmem_ptr)
         /* Find where this object belongs */
         if ((char *) ptr >= direct && (char *) ptr < directEnd) {
             nDirect++;
-        }
-        else {
+        } else {
             void **indirect = (void **) objmem->indirect;
             for (i = 0; i < objmem->indirect_size; i++) {
                 char *start = indirect[i];
@@ -167,8 +166,8 @@ const char *MPIR_Handle_get_kind_str(int kind)
         mpiu_name_case_(PROCGROUP);
         mpiu_name_case_(VCONN);
         mpiu_name_case_(GREQ_CLASS);
-        default:
-            return "unknown";
+    default:
+        return "unknown";
     }
 #undef mpiu_name_case_
 }

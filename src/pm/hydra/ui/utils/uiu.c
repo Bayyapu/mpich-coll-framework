@@ -189,8 +189,7 @@ static HYD_status resolve_pattern_string(const char *pattern, char **str, int pg
             tmp[i][tpos++] = pattern[pos++];
             if (pattern[pos - 1] == '\0')
                 break;
-        }
-        else {
+        } else {
             ++pos;      /* consume '%' */
 
             if (pattern[pos] == '%') {
@@ -284,8 +283,7 @@ static HYD_status stdoe_cb(int _fd, int pgid, int proxy_id, int rank, void *_buf
         if (run) {
             fd = run->fd;
             MPL_free(pattern_resolve);
-        }
-        else {
+        } else {
             HYDU_MALLOC_OR_JUMP(tmp, struct stdoe_fd *, sizeof(struct stdoe_fd), status);
             tmp->pattern = pattern_resolve;
             tmp->fd = open(tmp->pattern, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -307,8 +305,7 @@ static HYD_status stdoe_cb(int _fd, int pgid, int proxy_id, int rank, void *_buf
         status = HYDU_sock_write(fd, buf, buflen, &sent, &closed, HYDU_SOCK_COMM_MSGWAIT);
         HYDU_ERR_POP(status, "unable to write data to stdout/stderr\n");
         HYDU_ASSERT(!closed, status);
-    }
-    else {
+    } else {
         status = resolve_pattern_string(HYD_ui_info.prepend_pattern, &prepend, pgid, proxy_id,
                                         rank);
         HYDU_ERR_POP(status, "error resolving pattern\n");

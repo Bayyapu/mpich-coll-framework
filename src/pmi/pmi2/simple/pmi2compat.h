@@ -14,4 +14,3 @@
 #define PMI2U_Exit MPL_exit
 #define PMI2U_Info MPIR_Info
 #define PMI2U_Memcpy MPIR_Memcpy
-

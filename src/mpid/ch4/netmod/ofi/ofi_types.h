@@ -132,7 +132,7 @@
 /* Convert the address vector entry to an endpoint index.
  * This conversion depends on the data structure which could change based on
  * whether we're using scalable endpoints or not. */
-static inline int MPIDI_OFI_av_to_ep(MPIDI_OFI_addr_t *av)
+static inline int MPIDI_OFI_av_to_ep(MPIDI_OFI_addr_t * av)
 {
 #if MPIDI_OFI_ENABLE_RUNTIME_CHECKS
     return (av)->ep_idx;
@@ -149,7 +149,7 @@ static inline int MPIDI_OFI_av_to_ep(MPIDI_OFI_addr_t *av)
 /* Convert a communicator and rank to an endpoint index.
  * This conversion depends on the data structure which could change based on
  * whether we're using scalable endpoints or not. */
-static inline int MPIDI_OFI_comm_to_ep(MPIR_Comm *comm_ptr, int rank)
+static inline int MPIDI_OFI_comm_to_ep(MPIR_Comm * comm_ptr, int rank)
 {
 #if MPIDI_OFI_ENABLE_RUNTIME_CHECKS
     return MPIDI_OFI_AV(MPIDIU_comm_rank_to_av(comm_ptr, rank)).ep_idx;
@@ -231,21 +231,21 @@ enum {
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];       /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     int index;
 } MPIDI_OFI_am_repost_request_t;
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];       /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     MPIR_Request *signal_req;
 } MPIDI_OFI_ssendack_request_t;
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];       /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     int done;
     uint32_t tag;
@@ -319,14 +319,14 @@ typedef struct {
 } MPIDI_OFI_conn_t;
 
 typedef struct MPIDI_OFI_conn_manager_t {
-    int mmapped_size;            /* Size of the connection list memory which is mmapped */
-    int max_n_conn;              /* Maximum number of connections up to this point */
-    int n_conn;                  /* Current number of open connections */
-    int next_conn_id;            /* The next connection id to be used. */
-    int *free_conn_id;           /* The list of the next connection id to be used so we
-                                    can garbage collect as we go. */
-    MPIDI_OFI_conn_t *conn_list; /* The list of connection structs to track the
-                                    outstanding dynamic process connections. */
+    int mmapped_size;           /* Size of the connection list memory which is mmapped */
+    int max_n_conn;             /* Maximum number of connections up to this point */
+    int n_conn;                 /* Current number of open connections */
+    int next_conn_id;           /* The next connection id to be used. */
+    int *free_conn_id;          /* The list of the next connection id to be used so we
+                                 * can garbage collect as we go. */
+    MPIDI_OFI_conn_t *conn_list;        /* The list of connection structs to track the
+                                         * outstanding dynamic process connections. */
 } MPIDI_OFI_conn_manager_t;
 
 /* Global state data */
@@ -468,7 +468,7 @@ typedef struct {
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];       /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     struct MPIDI_Iovec_array *next;
     union {
@@ -506,7 +506,7 @@ typedef struct {
 typedef struct MPIDI_OFI_win_request {
     MPIR_OBJECT_HEADER;
     char pad[MPIDI_REQUEST_HDR_SIZE - MPIDI_OFI_OBJECT_HEADER_SIZE];
-    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];       /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     struct MPIDI_OFI_win_request *next;
     int target_rank;
@@ -515,14 +515,14 @@ typedef struct MPIDI_OFI_win_request {
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];       /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     MPIR_Request *parent;       /* Parent request           */
 } MPIDI_OFI_chunk_request;
 
 typedef struct MPIDI_OFI_huge_recv {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];       /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     int (*done_fn) (struct fi_cq_tagged_entry * wc, MPIR_Request * req, int event_id);
     MPIDI_OFI_send_control_t remote_info;
@@ -530,7 +530,7 @@ typedef struct MPIDI_OFI_huge_recv {
     MPIR_Comm *comm_ptr;
     MPIR_Request *localreq;
     struct fi_cq_tagged_entry wc;
-    struct MPIDI_OFI_huge_recv *next; /* Points to the next entry in the unexpected list
+    struct MPIDI_OFI_huge_recv *next;   /* Points to the next entry in the unexpected list
                                          * (when in the unexpected list) */
 } MPIDI_OFI_huge_recv_t;
 

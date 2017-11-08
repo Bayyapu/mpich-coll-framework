@@ -72,8 +72,7 @@ int main(int argc, char *argv[])
                 errs++;
                 if (verbose)
                     fprintf(stderr, "b[%d][%d] = %d; should be %d\n", i, j, b[i][j], 0);
-            }
-            else if (j <= i && b[i][j] != 1000 * i + j) {
+            } else if (j <= i && b[i][j] != 1000 * i + j) {
                 errs++;
                 if (verbose)
                     fprintf(stderr, "b[%d][%d] = %d; should be %d\n", i, j, b[i][j], 1000 * i + j);

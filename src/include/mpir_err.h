@@ -15,11 +15,11 @@ struct MPIR_Comm;
 struct MPIR_Win;
 
 /* Bindings for internal routines */
-MPICH_API_PUBLIC int MPIR_Err_return_comm( struct MPIR_Comm *, const char [], int );
-MPICH_API_PUBLIC int MPIR_Err_return_win( struct MPIR_Win *, const char [], int );
+MPICH_API_PUBLIC int MPIR_Err_return_comm(struct MPIR_Comm *, const char[], int);
+MPICH_API_PUBLIC int MPIR_Err_return_win(struct MPIR_Win *, const char[], int);
 #ifdef MPI__FILE_DEFINED
 /* Only define if we have MPI_File */
-MPICH_API_PUBLIC int MPIR_Err_return_file( MPI_File, const char [], int ); /* Romio version */
+MPICH_API_PUBLIC int MPIR_Err_return_file(MPI_File, const char[], int); /* Romio version */
 #endif
 /* FIXME:
  * Update this description to match the current version of the routine,
@@ -47,9 +47,9 @@ MPICH_API_PUBLIC int MPIR_Err_return_file( MPI_File, const char [], int ); /* Ro
  Notes:
  A typical use is\:
 .vb
-   mpi_errno = MPIR_Err_create_code( mpi_errno, MPIR_ERR_RECOVERABLE,
+   mpi_errno = MPIR_Err_create_code(mpi_errno, MPIR_ERR_RECOVERABLE,
                FCNAME, __LINE__, MPI_ERR_RANK,
-               "Invalid Rank", "Invalid rank %d", rank );
+               "Invalid Rank", "Invalid rank %d", rank);
 .ve
 
   Predefined message may also be used.  Any message that uses the
@@ -100,10 +100,12 @@ MPICH_API_PUBLIC int MPIR_Err_return_file( MPI_File, const char [], int ); /* Ro
   Error
 
   @*/
-MPICH_API_PUBLIC int MPIR_Err_create_code( int, int, const char [], int, int, const char [], const char [], ... );
+MPICH_API_PUBLIC int MPIR_Err_create_code(int, int, const char[], int, int, const char[],
+                                          const char[], ...);
 
 #ifdef USE_ERR_CODE_VALIST
-int MPIR_Err_create_code_valist( int, int, const char [], int, int, const char [], const char [], va_list );
+int MPIR_Err_create_code_valist(int, int, const char[], int, int, const char[], const char[],
+                                va_list);
 #endif
 
 /*@
@@ -134,15 +136,14 @@ int MPIR_Err_combine_codes(int, int);
 
 int MPIR_Err_is_fatal(int);
 void MPIR_Err_init(void);
-void MPIR_Err_preOrPostInit( void );
+void MPIR_Err_preOrPostInit(void);
 
-int MPIR_Err_set_msg( int code, const char *msg_string );
+int MPIR_Err_set_msg(int code, const char *msg_string);
 
 /* This routine is called when there is a fatal error. Now public because file
  * error handling is defined in a separate file from comm and win, but all
  * three need to call it */
-void MPIR_Handle_fatal_error(struct MPIR_Comm *comm_ptr,
-	const char fcname[], int errcode);
+void MPIR_Handle_fatal_error(struct MPIR_Comm *comm_ptr, const char fcname[], int errcode);
 
 #define MPIR_ERR_CLASS_MASK 0x0000007f
 #define MPIR_ERR_CLASS_SIZE 128
@@ -197,7 +198,7 @@ cvars:
 #define MPID_ERROR_DECL(a)
 #endif /* HAVE_ERROR_CHECKING */
 
-/* 
+/*
  *  Standardized error checking macros.  These provide the correct tests for
  *  common tests.  These set err with the encoded error value.
  */
@@ -210,32 +211,32 @@ cvars:
 
 #define MPIR_ERRTEST_RECV_TAG(tag,err)                                  \
     if ((tag) < MPI_ANY_TAG || (tag) > MPIR_Process.attrs.tag_ub) {     \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                    MPI_ERR_TAG, "**tag", "**tag %d", tag ); \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+                                    MPI_ERR_TAG, "**tag", "**tag %d", tag); \
         goto fn_fail;                                                   \
     }
 
 #define MPIR_ERRTEST_RANK(comm_ptr,rank,err)                            \
     if ((rank) < 0 || (rank) >= (comm_ptr)->remote_size) {              \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
                                     MPI_ERR_RANK, "**rank", "**rank %d %d", rank, \
-                                    (comm_ptr)->remote_size );          \
+                                    (comm_ptr)->remote_size);          \
         goto fn_fail;                                                   \
     }
 
 #define MPIR_ERRTEST_SEND_RANK(comm_ptr,rank,err)                       \
     if ((rank) < MPI_PROC_NULL || (rank) >= (comm_ptr)->remote_size) {  \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
                                     MPI_ERR_RANK, "**rank", "**rank %d %d", rank, \
-                                    (comm_ptr)->remote_size );          \
+                                    (comm_ptr)->remote_size);          \
         goto fn_fail;                                                   \
     }
 
 #define MPIR_ERRTEST_RECV_RANK(comm_ptr,rank,err)                       \
     if ((rank) < MPI_ANY_SOURCE || (rank) >= (comm_ptr)->remote_size) { \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
                                     MPI_ERR_RANK, "**rank", "**rank %d %d", rank, \
-                                    (comm_ptr)->remote_size );          \
+                                    (comm_ptr)->remote_size);          \
         goto fn_fail;                                                   \
     }
 
@@ -247,7 +248,7 @@ cvars:
 				   MPI_ERR_COUNT,               \
 				   "**countneg",                \
 				   "**countneg %d",             \
-				   count );                     \
+				   count);                     \
         goto fn_fail;                                           \
     }
 
@@ -257,7 +258,7 @@ cvars:
 				   MPIR_ERR_RECOVERABLE,        \
 				   FCNAME, __LINE__,            \
 				   MPI_ERR_DISP,                \
-				   "**rmadisp", 0 );            \
+				   "**rmadisp", 0);            \
         goto fn_fail;                                           \
     }
 
@@ -267,7 +268,7 @@ cvars:
 				   MPIR_ERR_RECOVERABLE,	\
 				   FCNAME, __LINE__,		\
 				   MPI_ERR_BUFFER,		\
-				   "**bufalias", 0 );		\
+				   "**bufalias", 0);		\
         goto fn_fail;                                           \
     }
 
@@ -279,7 +280,7 @@ cvars:
 				   MPIR_ERR_RECOVERABLE,	\
 				   FCNAME, __LINE__,		\
 				   MPI_ERR_BUFFER,		\
-				   "**bufalias", 0 );		\
+				   "**bufalias", 0);		\
         goto fn_fail;                                           \
     }
 
@@ -291,16 +292,16 @@ cvars:
                                    MPI_ERR_ARG,                 \
                                    "**nullptr",                 \
                                    "**nullptr %s",              \
-                                   arg_name );                  \
+                                   arg_name);                  \
         goto fn_fail;                                           \
-    } 
+    }
 
 #define MPIR_ERRTEST_ARGNEG(arg,arg_name,err)                           \
     if ((arg) < 0) {                                                    \
         err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE,   \
                                    FCNAME, __LINE__, MPI_ERR_ARG,       \
                                    "**argneg",                          \
-                                   "**argneg %s %d", arg_name, arg );   \
+                                   "**argneg %s %d", arg_name, arg);   \
         goto fn_fail;                                                   \
     }
 
@@ -312,7 +313,7 @@ cvars:
                                    errclass,                    \
                                    "**argnonpos",               \
                                    "**argnonpos %s %d",         \
-                                   arg_name, arg );             \
+                                   arg_name, arg);             \
         goto fn_fail;                                           \
     }
 
@@ -320,8 +321,8 @@ cvars:
 /* intercomm can be between MPI_PROC_NULL (or MPI_ROOT) and remote_size-1 */
 #define MPIR_ERRTEST_INTRA_ROOT(comm_ptr,root,err)                      \
     if ((root) < 0 || (root) >= (comm_ptr)->local_size) {               \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                    MPI_ERR_ROOT, "**root", "**root %d", root ); \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+                                    MPI_ERR_ROOT, "**root", "**root %d", root); \
         goto fn_fail;                                                   \
     }
 
@@ -329,15 +330,15 @@ cvars:
    intercomm test */
 #define MPIR_ERRTEST_INTER_ROOT(comm_ptr,root,err)                      \
     if ((root) < -3 || (root) >= (comm_ptr)->remote_size) {             \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                    MPI_ERR_ROOT, "**root", "**root %d", root ); \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+                                    MPI_ERR_ROOT, "**root", "**root %d", root); \
         goto fn_fail;                                                   \
     }
 
 #define MPIR_ERRTEST_PERSISTENT(reqp,err)                               \
     if ((reqp)->kind != MPIR_REQUEST_KIND__PREQUEST_SEND && reqp->kind != MPIR_REQUEST_KIND__PREQUEST_RECV) { \
         err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                   MPI_ERR_REQUEST, "**requestnotpersist", 0 ); \
+                                   MPI_ERR_REQUEST, "**requestnotpersist", 0); \
         goto fn_fail;                                                   \
     }
 
@@ -345,11 +346,11 @@ cvars:
     if (((reqp)->kind == MPIR_REQUEST_KIND__PREQUEST_SEND ||                          \
          reqp->kind == MPIR_REQUEST_KIND__PREQUEST_RECV) && reqp->u.persist.real_request != NULL) { \
         err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                   MPI_ERR_REQUEST, "**requestpersistactive", 0 ); \
+                                   MPI_ERR_REQUEST, "**requestpersistactive", 0); \
         goto fn_fail;                                                   \
     }
 
-#define MPIR_ERRTEST_COMM_INTRA(comm_ptr, err )                         \
+#define MPIR_ERRTEST_COMM_INTRA(comm_ptr, err)                         \
     if ((comm_ptr)->comm_kind != MPIR_COMM_KIND__INTRACOMM) {                      \
         err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
                                    MPI_ERR_COMM,"**commnotintra",0);    \
@@ -358,7 +359,7 @@ cvars:
 
 #define MPIR_ERRTEST_COMM_TAG(tag,err)                                  \
     if ((tag) < 0 || (tag) > MPIR_Process.attrs.tag_ub) {               \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
                                     MPI_ERR_TAG, "**tag", "**tag %d", tag); \
         goto fn_fail;                                                   \
     }
@@ -376,7 +377,7 @@ cvars:
                                         MPIR_ERR_RECOVERABLE,           \
                                         FCNAME, __LINE__,               \
                                         MPI_ERR_TYPE,                   \
-                                        "**dtype", 0 );                 \
+                                        "**dtype", 0);                 \
             goto fn_fail;                                               \
         }                                                               \
         if (datatype == MPI_DATATYPE_NULL)                              \
@@ -417,22 +418,22 @@ cvars:
 
 #define MPIR_ERRTEST_SENDBUF_INPLACE(sendbuf,count,err)                 \
     if (count > 0 && sendbuf == MPI_IN_PLACE) {                         \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                    MPI_ERR_BUFFER, "**sendbuf_inplace", 0 ); \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+                                    MPI_ERR_BUFFER, "**sendbuf_inplace", 0); \
         goto fn_fail;                                                   \
     }
 
 #define MPIR_ERRTEST_RECVBUF_INPLACE(recvbuf,count,err)                 \
     if (count > 0 && recvbuf == MPI_IN_PLACE) {                         \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                    MPI_ERR_BUFFER, "**recvbuf_inplace", 0 ); \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+                                    MPI_ERR_BUFFER, "**recvbuf_inplace", 0); \
         goto fn_fail;                                                   \
     }
 
 #define MPIR_ERRTEST_BUF_INPLACE(buf,count,err)                         \
     if (count > 0 && buf == MPI_IN_PLACE) {                             \
-        err = MPIR_Err_create_code( MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-                                    MPI_ERR_BUFFER, "**buf_inplace", 0 ); \
+        err = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
+                                    MPI_ERR_BUFFER, "**buf_inplace", 0); \
         goto fn_fail;                                                   \
     }
 
@@ -449,7 +450,7 @@ cvars:
  * buffer.  This does not guarantee that the buffer is valid but does
  * catch the most common problems.
  * Question:
- * Should this be an (inlineable) routine?  
+ * Should this be an (inlineable) routine?
  * Since it involves extracting the datatype pointer for non-builtin
  * datatypes, should it take a dtypeptr argument (valid only if not
  * builtin)?
@@ -471,13 +472,13 @@ cvars:
 				       MPIR_ERR_RECOVERABLE,		\
 				       FCNAME, __LINE__,		\
 				       MPI_ERR_BUFFER,			\
-				       "**bufnull", 0 );		\
+				       "**bufnull", 0);		\
             goto fn_fail;                                               \
 	}								\
     }
 
 /* The following are placeholders.  We haven't decided yet whether these
-   should take a handle or pointer, or if they should take a handle and return 
+   should take a handle or pointer, or if they should take a handle and return
    a pointer if the handle is valid.  These need to be rationalized with the
    MPID_xxx_valid_ptr and MPID_xxx_get_ptr.
 
@@ -601,7 +602,7 @@ cvars:
             }                                                           \
             else if (HANDLE_GET_KIND(request_) == HANDLE_KIND_INVALID) { \
                 MPIR_ERR_SETANDSTMT1(err_,MPI_ERR_REQUEST,goto fn_fail, \
-                                     "**request","**request %d", i_ );  \
+                                     "**request","**request %d", i_);  \
             }                                                           \
         }                                                               \
     }
@@ -762,7 +763,7 @@ cvars:
 /* FIXME: not yet done */
 #define MPIR_ERR_MEMALLOCFAILED MPI_ERR_INTERN
 
-/* 
+/*
  * Standardized error setting and checking macros
  * These are intended to simplify the insertion of standardized error
  * checks
@@ -786,69 +787,69 @@ cvars:
 #endif
 
 /* If you add any macros to this list, make sure that you update
- maint/extracterrmsgs to handle the additional macros (see the hash 
- KnownErrRoutines in that script) 
- ERR_SETSIMPLE is like ERR_SET except that it just sets the error, it 
+ maint/extracterrmsgs to handle the additional macros (see the hash
+ KnownErrRoutines in that script)
+ ERR_SETSIMPLE is like ERR_SET except that it just sets the error, it
  doesn't add it to an existing error.  This is appropriate in cases
  where there can be no pre-existing error, and MPI_SUCCESS is needed for the
  first argument to MPIR_Err_create_code .
 */
 #ifdef HAVE_ERROR_CHECKING
 #define MPIR_ERR_SETSIMPLE(err_,class_,msg_)	\
-    err_ = MPIR_Err_create_code( MPI_SUCCESS,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, msg_, 0 )
+    err_ = MPIR_Err_create_code(MPI_SUCCESS,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, msg_, 0)
 #define MPIR_ERR_SET(err_,class_,msg_) \
-    err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, msg_, 0 )
+    err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, msg_, 0)
 #define MPIR_ERR_SET1(err_,class_,gmsg_,smsg_,arg1_) \
-    err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_ )
+    err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_)
 #define MPIR_ERR_SET2(err_,class_,gmsg_,smsg_,arg1_,arg2_) \
-    err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_ )
+    err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_)
 #define MPIR_ERR_SETANDSTMT(err_,class_,stmt_,msg_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, msg_, 0 ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, msg_, 0); stmt_ ;} while (0)
 #define MPIR_ERR_SETANDSTMT1(err_,class_,stmt_,gmsg_,smsg_,arg1_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_); stmt_ ;} while (0)
 #define MPIR_ERR_SETANDSTMT2(err_,class_,stmt_,gmsg_,smsg_,arg1_,arg2_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_); stmt_ ;} while (0)
 #define MPIR_ERR_SETANDSTMT3(err_,class_,stmt_,gmsg_,smsg_,arg1_,arg2_, arg3_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_); stmt_ ;} while (0)
 #define MPIR_ERR_SETANDSTMT4(err_,class_,stmt_,gmsg_,smsg_,arg1_,arg2_, arg3_, arg4_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_RECOVERABLE,FCNAME,\
-	    __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_, arg4_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_RECOVERABLE,FCNAME,\
+	    __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_, arg4_); stmt_ ;} while (0)
 
 #define MPIR_ERR_SETFATALSIMPLE(err_,class_,msg_) \
-    err_ = MPIR_Err_create_code( MPI_SUCCESS,MPIR_ERR_FATAL,FCNAME,     \
-           __LINE__, class_, msg_, 0 )
+    err_ = MPIR_Err_create_code(MPI_SUCCESS,MPIR_ERR_FATAL,FCNAME,     \
+           __LINE__, class_, msg_, 0)
 #define MPIR_ERR_SETFATAL(err_,class_,msg_) \
-    err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-           __LINE__, class_, msg_, 0 )
+    err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+           __LINE__, class_, msg_, 0)
 #define MPIR_ERR_SETFATAL1(err_,class_,gmsg_,smsg_,arg1_) \
-    err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_ )
+    err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_)
 #define MPIR_ERR_SETFATAL2(err_,class_,gmsg_,smsg_,arg1_,arg2_) \
-    err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_ )
+    err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_)
 #define MPIR_ERR_SETFATALANDSTMT(err_,class_,stmt_,msg_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-           __LINE__, class_, msg_, 0 ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+           __LINE__, class_, msg_, 0); stmt_ ;} while (0)
 #define MPIR_ERR_SETFATALANDSTMT1(err_,class_,stmt_,gmsg_,smsg_,arg1_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_); stmt_ ;} while (0)
 #define MPIR_ERR_SETFATALANDSTMT2(err_,class_,stmt_,gmsg_,smsg_,arg1_,arg2_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_); stmt_ ;} while (0)
 #define MPIR_ERR_SETFATALANDSTMT3(err_,class_,stmt_,gmsg_,smsg_,arg1_,arg2_, arg3_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+           __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_); stmt_ ;} while (0)
 #define MPIR_ERR_SETFATALANDSTMT4(err_,class_,stmt_,gmsg_,smsg_,arg1_,arg2_, arg3_, arg4_) \
-    do {err_ = MPIR_Err_create_code( err_,MPIR_ERR_FATAL,FCNAME,\
-	    __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_, arg4_ ); stmt_ ;} while (0)
+    do {err_ = MPIR_Err_create_code(err_,MPIR_ERR_FATAL,FCNAME,\
+	    __LINE__, class_, gmsg_, smsg_, arg1_, arg2_, arg3_, arg4_); stmt_ ;} while (0)
 #define MPIR_ERR_ADD(err_, newerr_) \
     do {(err_) = MPIR_Err_combine_codes((err_), (newerr_));} while (0)
 #else
@@ -891,13 +892,13 @@ cvars:
      MPIR_ERR_SETANDSTMT(err_,class_,stmt_,gmsg_)
 #define MPIR_ERR_SETFATALANDSTMT4(err_,class_,stmt_,gmsg_,smsg_,arg1_,arg2_,arg3_,arg4_) \
      MPIR_ERR_SETANDSTMT(err_,class_,stmt_,gmsg_)
-    /* No-op - use original error class; discard newerr_ unless err is 
-       MPI_SUCCESS*/
+    /* No-op - use original error class; discard newerr_ unless err is
+     * MPI_SUCCESS */
 #define MPIR_ERR_ADD(err_, newerr_) \
     do {if (!err_) err_ = newerr_;} while (0)
 #endif
 
-/* The following definitions are the same independent of the choice of 
+/* The following definitions are the same independent of the choice of
    HAVE_ERROR_CHECKING */
 #define MPIR_ERR_SETANDJUMP(err_,class_,msg_) \
      MPIR_ERR_SETANDSTMT(err_,class_,goto fn_fail,msg_)
@@ -971,12 +972,12 @@ cvars:
 #define MPIR_ERR_INTERNALANDJUMP(err_, msg_) \
     MPIR_ERR_INTERNALANDSTMT(err_, msg_, goto fn_fail)
 #define MPIR_ERR_CHKINTERNAL(cond_, err_, msg_) \
-    do {if (cond_) MPIR_ERR_INTERNALANDJUMP(err_, msg_);} while(0)
+    do {if (cond_) MPIR_ERR_INTERNALANDJUMP(err_, msg_);} while (0)
 
 /* --END ERROR MACROS-- */
 
-/* 
- * Special case for "is initialized".  
+/*
+ * Special case for "is initialized".
  * This should be used in cases where there is no
  * additional error checking
  */
@@ -997,4 +998,4 @@ do {								\
 /* end of mpir_err.h */
 /* ------------------------------------------------------------------------- */
 
-#endif  /* MPIR_ERR_H_INCLUDED */
+#endif /* MPIR_ERR_H_INCLUDED */

@@ -170,8 +170,7 @@ void MTestInitFullDatatypes(void)
         MTEST_DATATYPE_TEST_LEVEL = MTEST_DATATYPE_TEST_LEVEL_FULL;
         MTestTypeCreatorInit((MTestDdtCreator *) mtestDdtCreators);
         MTestInitDatatypeGen(MTEST_BDT_MAX, MTEST_DDT_MAX);
-    }
-    else {
+    } else {
         printf("Warning: trying to reinitialize mtest datatype during " "datatype iteration!");
     }
 }
@@ -186,8 +185,7 @@ void MTestInitMinDatatypes(void)
         MTEST_DATATYPE_TEST_LEVEL = MTEST_DATATYPE_TEST_LEVEL_MIN;
         MTestTypeMinCreatorInit((MTestDdtCreator *) mtestDdtCreators);
         MTestInitDatatypeGen(MTEST_BDT_MAX, MTEST_MIN_DDT_MAX);
-    }
-    else {
+    } else {
         printf("Warning: trying to reinitialize mtest datatype during " "datatype iteration!");
     }
 }
@@ -201,8 +199,7 @@ void MTestInitBasicDatatypes(void)
     if (!MTestIsDatatypeGenInited()) {
         MTEST_DATATYPE_TEST_LEVEL = MTEST_DATATYPE_TEST_LEVEL_BASIC;
         MTestInitDatatypeGen(MTEST_BDT_MAX, 0);
-    }
-    else {
+    } else {
         printf("Warning: trying to reinitialize mtest datatype during " "datatype iteration!");
     }
 }
@@ -225,12 +222,10 @@ static inline void MTestInitDatatypeEnv()
         if (!strncmp(envval, "min", strlen("min"))) {
             MTEST_DATATYPE_TEST_LEVEL_ENV = MTEST_DATATYPE_TEST_LEVEL_MIN;
             MTestInitDefaultTestFunc = MTestInitMinDatatypes;
-        }
-        else if (!strncmp(envval, "basic", strlen("basic"))) {
+        } else if (!strncmp(envval, "basic", strlen("basic"))) {
             MTEST_DATATYPE_TEST_LEVEL_ENV = MTEST_DATATYPE_TEST_LEVEL_BASIC;
             MTestInitDefaultTestFunc = MTestInitBasicDatatypes;
-        }
-        else if (strncmp(envval, "full", strlen("full"))) {
+        } else if (strncmp(envval, "full", strlen("full"))) {
             fprintf(stderr, "Unknown MPITEST_DATATYPE_TEST_LEVEL %s\n", envval);
         }
     }
@@ -256,11 +251,9 @@ static inline int MTestDdtStructDefine(int ddt_index, MPI_Aint tot_count, MPI_Ai
      * for large-count structure. */
     if (tot_count < 2) {
         _short = 1;
-    }
-    else if (tot_count < 64) {
+    } else if (tot_count < 64) {
         _short = 2;
-    }
-    else {
+    } else {
         _short = 64;
     }
     _align_tot_count = (tot_count + _short - 1) & ~(_short - 1);
@@ -501,16 +494,13 @@ int MTestGetDatatypes(MTestDatatype * sendtype, MTestDatatype * recvtype, MPI_Ai
     if (datatype_index < MTEST_BDT_RANGE) {
         merr = MTestGetBasicDatatypes(sendtype, recvtype, tot_count);
 
-    }
-    else if (datatype_index < MTEST_SEND_DDT_RANGE) {
+    } else if (datatype_index < MTEST_SEND_DDT_RANGE) {
         merr = MTestGetSendDerivedDatatypes(sendtype, recvtype, tot_count);
 
-    }
-    else if (datatype_index < MTEST_RECV_DDT_RANGE) {
+    } else if (datatype_index < MTEST_RECV_DDT_RANGE) {
         merr = MTestGetRecvDerivedDatatypes(sendtype, recvtype, tot_count);
 
-    }
-    else {
+    } else {
         /* out of range */
         datatype_index = -1;
         MTestResetDatatypeGen();

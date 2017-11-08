@@ -241,8 +241,7 @@ static inline void *MPIR_Handle_obj_alloc_unsafe(MPIR_Object_alloc_t * objmem)
          * when doing memory debugging and we don't need to set it
          * for the production/default case */
         /* ptr points to object to allocate */
-    }
-    else {
+    } else {
         int objsize, objkind;
 
         objsize = objmem->size;
@@ -259,7 +258,6 @@ static inline void *MPIR_Handle_obj_alloc_unsafe(MPIR_Object_alloc_t * objmem)
             if (ptr) {
                 objmem->avail = ptr->next;
             }
-
 #ifdef MPICH_DEBUG_HANDLEALLOC
             /* The priority of these callbacks must be greater than
              * the priority of the callback that frees the objmem direct and
@@ -269,8 +267,7 @@ static inline void *MPIR_Handle_obj_alloc_unsafe(MPIR_Object_alloc_t * objmem)
 #endif
             MPIR_Add_finalize(MPIR_Handle_finalize, objmem, 0);
             /* ptr points to object to allocate */
-        }
-        else {
+        } else {
             /* no space left in direct block; setup the indirect block. */
 
             ptr = MPIR_Handle_indirect_init(&objmem->indirect,

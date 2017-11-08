@@ -12,7 +12,7 @@ static inline int MPIU_pof2(int number)
 {
     int pof2 = 1;
 
-    while(pof2 <= number)
+    while (pof2 <= number)
         pof2 <<= 1;
     pof2 >>= 1;
 
@@ -47,8 +47,7 @@ static inline int MPIR_Op_is_commutative(MPI_Op op)
 
     if (HANDLE_GET_KIND(op) == HANDLE_KIND_BUILTIN) {
         return TRUE;
-    }
-    else {
+    } else {
         MPIR_Op_get_ptr(op, op_ptr);
         if (op_ptr->kind == MPIR_OP_KIND__USER_NONCOMMUTE)
             return FALSE;
@@ -61,8 +60,8 @@ static inline int MPIR_Op_is_commutative(MPI_Op op)
  *
  * positions 76543210, bits==3 yields 76543012.
  */
-ATTRIBUTE((const)) /* tells the compiler that this func only depends on its args
-                      and may be optimized much more aggressively, similar to "pure" */
+ATTRIBUTE((const))      /* tells the compiler that this func only depends on its args
+                         * and may be optimized much more aggressively, similar to "pure" */
 static inline int MPIU_Mirror_permutation(unsigned int x, int bits)
 {
     /* a mask for the high order bits that should be copied as-is */
@@ -71,7 +70,7 @@ static inline int MPIU_Mirror_permutation(unsigned int x, int bits)
     int i;
 
     for (i = 0; i < bits; ++i) {
-        unsigned int bitval = (x & (0x1 << i)) >> i; /* 0x1 or 0x0 */
+        unsigned int bitval = (x & (0x1 << i)) >> i;    /* 0x1 or 0x0 */
         retval |= bitval << ((bits - i) - 1);
     }
 

@@ -14,7 +14,8 @@
 #elif defined(HAVE_PRAGMA_CRI_DUP)
 #pragma _CRI duplicate MPI_Ibarrier as PMPI_Ibarrier
 #elif defined(HAVE_WEAK_ATTRIBUTE)
-int MPI_Ibarrier(MPI_Comm comm, MPI_Request *request) __attribute__((weak,alias("PMPI_Ibarrier")));
+int MPI_Ibarrier(MPI_Comm comm, MPI_Request * request)
+    __attribute__ ((weak, alias("PMPI_Ibarrier")));
 #endif
 /* -- End Profiling Symbol Block */
 
@@ -53,7 +54,7 @@ int MPI_Ibarrier(MPI_Comm comm, MPI_Request *request) __attribute__((weak,alias(
 #define FUNCNAME MPIR_Ibarrier_intra
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Ibarrier_intra(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+int MPIR_Ibarrier_intra(MPIR_Comm * comm_ptr, MPIR_Sched_t s)
 {
     int mpi_errno = MPI_SUCCESS;
     int size, rank, src, dst, mask;
@@ -64,7 +65,8 @@ int MPIR_Ibarrier_intra(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
     rank = comm_ptr->rank;
 
     /* Trivial barriers return immediately */
-    if (size == 1) goto fn_exit;
+    if (size == 1)
+        goto fn_exit;
 
     mask = 0x1;
     while (mask < size) {
@@ -72,20 +74,23 @@ int MPIR_Ibarrier_intra(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
         src = (rank - mask + size) % size;
 
         mpi_errno = MPIR_Sched_send(NULL, 0, MPI_BYTE, dst, comm_ptr, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
 
         mpi_errno = MPIR_Sched_recv(NULL, 0, MPI_BYTE, src, comm_ptr, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
 
         mpi_errno = MPIR_Sched_barrier(s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
 
         mask <<= 1;
     }
 
-fn_exit:
+  fn_exit:
     return mpi_errno;
-fn_fail:
+  fn_fail:
     goto fn_exit;
 }
 
@@ -96,7 +101,7 @@ fn_fail:
 #define FUNCNAME MPIR_Ibarrier_inter
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Ibarrier_inter(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+int MPIR_Ibarrier_inter(MPIR_Comm * comm_ptr, MPIR_Sched_t s)
 {
     int mpi_errno = MPI_SUCCESS;
     int rank, root;
@@ -110,57 +115,62 @@ int MPIR_Ibarrier_inter(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
     /* Get the local intracommunicator */
     if (!comm_ptr->local_comm) {
         mpi_errno = MPII_Setup_intercomm_localcomm(comm_ptr);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     }
 
     /* do a barrier on the local intracommunicator */
     MPIR_Assert(comm_ptr->local_comm->coll_fns && comm_ptr->local_comm->coll_fns->Ibarrier_sched);
-    if(comm_ptr->local_size != 1) {
+    if (comm_ptr->local_size != 1) {
         mpi_errno = comm_ptr->local_comm->coll_fns->Ibarrier_sched(comm_ptr->local_comm, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
         MPIR_SCHED_BARRIER(s);
     }
     /* rank 0 on each group does an intercommunicator broadcast to the
-       remote group to indicate that all processes in the local group
-       have reached the barrier. We do a 1-byte bcast because a 0-byte
-       bcast will just return without doing anything. */
+     * remote group to indicate that all processes in the local group
+     * have reached the barrier. We do a 1-byte bcast because a 0-byte
+     * bcast will just return without doing anything. */
 
     MPIR_SCHED_CHKPMEM_MALLOC(buf, char *, 1, mpi_errno, "bcast buf", MPL_MEM_BUFFER);
-    buf[0] = 'D'; /* avoid valgrind warnings */
+    buf[0] = 'D';       /* avoid valgrind warnings */
 
     /* first broadcast from left to right group, then from right to
-       left group */
+     * left group */
     MPIR_Assert(comm_ptr->coll_fns && comm_ptr->coll_fns->Ibcast_sched);
     if (comm_ptr->is_low_group) {
         root = (rank == 0) ? MPI_ROOT : MPI_PROC_NULL;
         mpi_errno = comm_ptr->coll_fns->Ibcast_sched(buf, 1, MPI_BYTE, root, comm_ptr, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
 
         MPIR_SCHED_BARRIER(s);
 
         /* receive bcast from right */
         root = 0;
         mpi_errno = comm_ptr->coll_fns->Ibcast_sched(buf, 1, MPI_BYTE, root, comm_ptr, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
-    }
-    else {
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
+    } else {
         /* receive bcast from left */
         root = 0;
         mpi_errno = comm_ptr->coll_fns->Ibcast_sched(buf, 1, MPI_BYTE, root, comm_ptr, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
 
         MPIR_SCHED_BARRIER(s);
 
         /* bcast to left */
         root = (rank == 0) ? MPI_ROOT : MPI_PROC_NULL;
         mpi_errno = comm_ptr->coll_fns->Ibcast_sched(buf, 1, MPI_BYTE, root, comm_ptr, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     }
 
     MPIR_SCHED_CHKPMEM_COMMIT(s);
-fn_exit:
+  fn_exit:
     return mpi_errno;
-fn_fail:
+  fn_fail:
     MPIR_SCHED_CHKPMEM_REAP(s);
     goto fn_exit;
 }
@@ -169,7 +179,7 @@ fn_fail:
 #define FUNCNAME MPIR_Ibarrier_impl
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Ibarrier_impl(MPIR_Comm *comm_ptr, MPI_Request *request)
+int MPIR_Ibarrier_impl(MPIR_Comm * comm_ptr, MPI_Request * request)
 {
     int mpi_errno = MPI_SUCCESS;
     MPIR_Request *reqp = NULL;
@@ -180,23 +190,27 @@ int MPIR_Ibarrier_impl(MPIR_Comm *comm_ptr, MPI_Request *request)
 
     if (comm_ptr->local_size != 1 || comm_ptr->comm_kind == MPIR_COMM_KIND__INTERCOMM) {
         mpi_errno = MPIR_Sched_next_tag(comm_ptr, &tag);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
         mpi_errno = MPIR_Sched_create(&s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
 
         MPIR_Assert(comm_ptr->coll_fns->Ibarrier_sched != NULL);
         mpi_errno = comm_ptr->coll_fns->Ibarrier_sched(comm_ptr, s);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
 
         mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);
         if (reqp)
             *request = reqp->handle;
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     }
 
-fn_exit:
+  fn_exit:
     return mpi_errno;
-fn_fail:
+  fn_fail:
     goto fn_exit;
 }
 
@@ -232,7 +246,7 @@ group have called MPI_Ibarrier.
 
 .N Errors
 @*/
-int MPI_Ibarrier(MPI_Comm comm, MPI_Request *request)
+int MPI_Ibarrier(MPI_Comm comm, MPI_Request * request)
 {
     int mpi_errno = MPI_SUCCESS;
     MPIR_Comm *comm_ptr = NULL;
@@ -242,7 +256,7 @@ int MPI_Ibarrier(MPI_Comm comm, MPI_Request *request)
     MPIR_FUNC_TERSE_ENTER(MPID_STATE_MPI_IBARRIER);
 
     /* Validate parameters, especially handles needing to be converted */
-#   ifdef HAVE_ERROR_CHECKING
+#ifdef HAVE_ERROR_CHECKING
     {
         MPID_BEGIN_ERROR_CHECKS;
         {
@@ -252,46 +266,48 @@ int MPI_Ibarrier(MPI_Comm comm, MPI_Request *request)
         }
         MPID_END_ERROR_CHECKS;
     }
-#   endif /* HAVE_ERROR_CHECKING */
+#endif /* HAVE_ERROR_CHECKING */
 
     /* Convert MPI object handles to object pointers */
     MPIR_Comm_get_ptr(comm, comm_ptr);
 
     /* Validate parameters and objects (post conversion) */
-#   ifdef HAVE_ERROR_CHECKING
+#ifdef HAVE_ERROR_CHECKING
     {
         MPID_BEGIN_ERROR_CHECKS;
         {
-            MPIR_Comm_valid_ptr( comm_ptr, mpi_errno, FALSE );
-            if (mpi_errno != MPI_SUCCESS) goto fn_fail;
-            MPIR_ERRTEST_ARGNULL(request,"request", mpi_errno);
+            MPIR_Comm_valid_ptr(comm_ptr, mpi_errno, FALSE);
+            if (mpi_errno != MPI_SUCCESS)
+                goto fn_fail;
+            MPIR_ERRTEST_ARGNULL(request, "request", mpi_errno);
             /* TODO more checks may be appropriate (counts, in_place, buffer aliasing, etc) */
         }
         MPID_END_ERROR_CHECKS;
     }
-#   endif /* HAVE_ERROR_CHECKING */
+#endif /* HAVE_ERROR_CHECKING */
 
     /* ... body of routine ...  */
 
     mpi_errno = MPID_Ibarrier(comm_ptr, request);
-    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+    if (mpi_errno)
+        MPIR_ERR_POP(mpi_errno);
 
     /* ... end of body of routine ... */
 
-fn_exit:
+  fn_exit:
     MPIR_FUNC_TERSE_EXIT(MPID_STATE_MPI_IBARRIER);
     MPID_THREAD_CS_EXIT(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     return mpi_errno;
 
-fn_fail:
+  fn_fail:
     /* --BEGIN ERROR HANDLING-- */
-#   ifdef HAVE_ERROR_CHECKING
+#ifdef HAVE_ERROR_CHECKING
     {
-        mpi_errno = MPIR_Err_create_code(
-            mpi_errno, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, MPI_ERR_OTHER,
-            "**mpi_ibarrier", "**mpi_ibarrier %C %p", comm, request);
+        mpi_errno =
+            MPIR_Err_create_code(mpi_errno, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, MPI_ERR_OTHER,
+                                 "**mpi_ibarrier", "**mpi_ibarrier %C %p", comm, request);
     }
-#   endif
+#endif
     mpi_errno = MPIR_Err_return_comm(comm_ptr, FCNAME, mpi_errno);
     goto fn_exit;
     /* --END ERROR HANDLING-- */

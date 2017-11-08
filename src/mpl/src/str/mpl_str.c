@@ -26,8 +26,7 @@ int MPL_snprintf(char *str, size_t size, mpl_const char *format, ...)
             while (size-- > 0 && *p) {
                 *out_str++ = *p++;
             }
-        }
-        else {
+        } else {
             int nc;
             int width = -1;
 
@@ -49,8 +48,7 @@ int MPL_snprintf(char *str, size_t size, mpl_const char *format, ...)
                 /* When there is no longer a digit, get the format
                  * character */
                 nc = *p++;
-            }
-            else {
+            } else {
                 /* Skip over the format string */
                 p += 2;
             }
@@ -245,8 +243,7 @@ int MPL_strncpy(char *dest, const char *src, size_t n)
     if (i > 0) {
         *d_ptr = 0;
         return 0;
-    }
-    else {
+    } else {
         /* Force a null at the end of the string (gives better safety
          * in case the user fails to check the error code) */
         dest[n - 1] = 0;
@@ -290,7 +287,7 @@ char *MPL_strsep(char **stringp, const char *delim)
         for (j = 0; delim[j] != '\0'; ++j) {
             if (ret[i] == delim[j]) {
                 ret[i] = '\0';
-                *stringp = &ret[i+1];
+                *stringp = &ret[i + 1];
                 return ret;
             }
         }
@@ -354,8 +351,7 @@ int MPL_strnapp(char *dest, const char *src, size_t n)
     if (i >= 0) {
         *d_ptr = 0;
         return 0;
-    }
-    else {
+    } else {
         /* Force the null at the end */
         *--d_ptr = 0;
 

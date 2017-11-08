@@ -69,7 +69,7 @@
 #define MPII_Timer_init(rank, size)
 #define MPII_Timer_finalize()
 
-#else   /* ! defined(MPL_USE_DBG_LOGGING) && ! defined(MPICH_DEBUG_MEMARENA) */
+#else /* ! defined(MPL_USE_DBG_LOGGING) && ! defined(MPICH_DEBUG_MEMARENA) */
 
 /* Routine tracing (see --enable-timing for control of this) */
 #if defined(HAVE_TIMING) && (HAVE_TIMING == MPICH_TIMING_KIND__LOG || \

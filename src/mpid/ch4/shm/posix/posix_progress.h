@@ -153,8 +153,7 @@ static inline int MPIDI_POSIX_progress_recv(int blocking, int *completion_count)
                         MPIR_Segment_free(MPIDI_POSIX_REQUEST(req)->segment_ptr);
                     else
                         MPIDI_POSIX_REQUEST(req)->segment_first = last;
-                }
-                else
+                } else
                     /* contig */
                 if (send_buffer)
                     MPIR_Memcpy(recv_buffer, (void *) send_buffer, data_sz);
@@ -168,8 +167,7 @@ static inline int MPIDI_POSIX_progress_recv(int blocking, int *completion_count)
                     if (in_cell) {
                         req->status.MPI_SOURCE = cell->rank;
                         req->status.MPI_TAG = cell->tag;
-                    }
-                    else {
+                    } else {
                         req->status.MPI_SOURCE = sreq->status.MPI_SOURCE;
                         req->status.MPI_TAG = sreq->status.MPI_TAG;
                     }
@@ -179,8 +177,8 @@ static inline int MPIDI_POSIX_progress_recv(int blocking, int *completion_count)
                 }
 
                 goto release_cell_l;
-            }   /* if matched  */
-
+            }
+            /* if matched  */
             prev_req = req;
             req = MPIDI_POSIX_REQUEST(req)->next;
         }
@@ -205,8 +203,7 @@ static inline int MPIDI_POSIX_progress_recv(int blocking, int *completion_count)
                 MPIDI_POSIX_REQUEST(rreq)->user_buf = (char *) MPL_malloc(data_sz, MPL_MEM_SHM);
                 MPIR_Memcpy(MPIDI_POSIX_REQUEST(rreq)->user_buf, (void *) cell->pkt.mpich.p.payload,
                             data_sz);
-            }
-            else {
+            } else {
                 MPIDI_POSIX_REQUEST(rreq)->user_buf = NULL;
             }
 
@@ -219,8 +216,7 @@ static inline int MPIDI_POSIX_progress_recv(int blocking, int *completion_count)
                             (MPL_DBG_FDEST, "Unexpected from grank %d to %d in progress %d,%d,%d\n",
                              cell->my_rank, MPIDI_POSIX_mem_region.rank,
                              cell->rank, cell->tag, cell->context_id));
-        }
-        else {
+        } else {
             /* examine another message in unexpected queue */
             prev_sreq = sreq;
             sreq = MPIDI_POSIX_REQUEST(sreq)->next;
@@ -239,8 +235,7 @@ static inline int MPIDI_POSIX_progress_recv(int blocking, int *completion_count)
         {
             MPIDI_POSIX_queue_enqueue(MPIDI_POSIX_mem_region.FreeQ[cell->my_rank], cell);
         }
-    }
-    else {
+    } else {
         /* destroy unexpected req */
         MPIDI_POSIX_REQUEST(sreq)->pending = NULL;
         MPL_free(MPIDI_POSIX_REQUEST(sreq)->user_buf);
@@ -302,8 +297,7 @@ static inline int MPIDI_POSIX_progress_send(int blocking, int *completion_count)
             if (MPIDI_POSIX_REQUEST(sreq)->type == MPIDI_POSIX_TYPEACK) {
                 cell->pkt.mpich.type = MPIDI_POSIX_TYPEACK;
                 cell->pending = MPIDI_POSIX_REQUEST(sreq)->pending;
-            }
-            else {
+            } else {
                 /* eager message */
                 if (MPIDI_POSIX_REQUEST(sreq)->segment_ptr) {
                     /* non-contig */
@@ -312,8 +306,7 @@ static inline int MPIDI_POSIX_progress_send(int blocking, int *completion_count)
                                       (MPI_Aint *) & MPIDI_POSIX_REQUEST(sreq)->segment_size,
                                       recv_buffer);
                     MPIR_Segment_free(MPIDI_POSIX_REQUEST(sreq)->segment_ptr);
-                }
-                else {
+                } else {
                     /* contig */
                     MPIR_Memcpy((void *) recv_buffer, MPIDI_POSIX_REQUEST(sreq)->user_buf, data_sz);
                 }
@@ -332,8 +325,7 @@ static inline int MPIDI_POSIX_progress_send(int blocking, int *completion_count)
             /* dequeue sreq */
             MPIDI_POSIX_REQUEST_DEQUEUE_AND_SET_ERROR(&sreq, prev_sreq, MPIDI_POSIX_sendq,
                                                       mpi_errno);
-        }
-        else {
+        } else {
             /* long message */
             if (MPIDI_POSIX_REQUEST(sreq)->segment_ptr) {
                 /* non-contig */
@@ -343,8 +335,7 @@ static inline int MPIDI_POSIX_progress_send(int blocking, int *completion_count)
                                   MPIDI_POSIX_REQUEST(sreq)->segment_first, (MPI_Aint *) & last,
                                   recv_buffer);
                 MPIDI_POSIX_REQUEST(sreq)->segment_first = last;
-            }
-            else {
+            } else {
                 /* contig */
                 MPIR_Memcpy((void *) recv_buffer, MPIDI_POSIX_REQUEST(sreq)->user_buf,
                             MPIDI_POSIX_EAGER_THRESHOLD);

@@ -13,16 +13,18 @@
    This is an intracommunicator barrier only!
 */
 
-int MPIR_Barrier_group( MPIR_Comm *comm_ptr, MPIR_Group *group_ptr, int tag, MPIR_Errflag_t *errflag )
+int MPIR_Barrier_group(MPIR_Comm * comm_ptr, MPIR_Group * group_ptr, int tag,
+                       MPIR_Errflag_t * errflag)
 {
     int src = 0;
     int dst, mpi_errno = MPI_SUCCESS;
 
     /* Trivial barriers return immediately */
-    if (comm_ptr->local_size == 1) goto fn_exit;
+    if (comm_ptr->local_size == 1)
+        goto fn_exit;
 
-    mpi_errno = MPIR_Allreduce_group(&src, &dst, 1, MPI_INT, MPI_BAND, 
-                                      comm_ptr, group_ptr, tag, errflag);
+    mpi_errno = MPIR_Allreduce_group(&src, &dst, 1, MPI_INT, MPI_BAND,
+                                     comm_ptr, group_ptr, tag, errflag);
 
     if (mpi_errno != MPI_SUCCESS || *errflag != MPIR_ERR_NONE)
         *errflag = MPIR_ERR_GET_CLASS(mpi_errno);
@@ -30,4 +32,3 @@ int MPIR_Barrier_group( MPIR_Comm *comm_ptr, MPIR_Group *group_ptr, int tag, MPI
   fn_exit:
     return mpi_errno;
 }
-

@@ -111,12 +111,10 @@ void MTest_Init_thread(int *argc, char ***argv, int required, int *provided)
             /* This is the error case for strtol */
             fprintf(stderr, "Warning: %s not valid for MPITEST_VERBOSE\n", envval);
             fflush(stderr);
-        }
-        else {
+        } else {
             if (val >= 0) {
                 verbose = val;
-            }
-            else {
+            } else {
                 fprintf(stderr, "Warning: %s not valid for MPITEST_VERBOSE\n", envval);
                 fflush(stderr);
             }
@@ -129,13 +127,11 @@ void MTest_Init_thread(int *argc, char ***argv, int required, int *provided)
             strcmp(envval, "YES") == 0 ||
             strcmp(envval, "true") == 0 || strcmp(envval, "TRUE") == 0) {
             returnWithVal = 1;
-        }
-        else if (strcmp(envval, "no") == 0 ||
-                 strcmp(envval, "NO") == 0 ||
-                 strcmp(envval, "false") == 0 || strcmp(envval, "FALSE") == 0) {
+        } else if (strcmp(envval, "no") == 0 ||
+                   strcmp(envval, "NO") == 0 ||
+                   strcmp(envval, "false") == 0 || strcmp(envval, "FALSE") == 0) {
             returnWithVal = 0;
-        }
-        else {
+        } else {
             fprintf(stderr, "Warning: %s not valid for MPITEST_RETURN_WITH_CODE\n", envval);
             fflush(stderr);
         }
@@ -165,17 +161,13 @@ void MTest_Init(int *argc, char ***argv)
     if (str && *str) {
         if (strcmp(str, "MULTIPLE") == 0 || strcmp(str, "multiple") == 0) {
             threadLevel = MPI_THREAD_MULTIPLE;
-        }
-        else if (strcmp(str, "SERIALIZED") == 0 || strcmp(str, "serialized") == 0) {
+        } else if (strcmp(str, "SERIALIZED") == 0 || strcmp(str, "serialized") == 0) {
             threadLevel = MPI_THREAD_SERIALIZED;
-        }
-        else if (strcmp(str, "FUNNELED") == 0 || strcmp(str, "funneled") == 0) {
+        } else if (strcmp(str, "FUNNELED") == 0 || strcmp(str, "funneled") == 0) {
             threadLevel = MPI_THREAD_FUNNELED;
-        }
-        else if (strcmp(str, "SINGLE") == 0 || strcmp(str, "single") == 0) {
+        } else if (strcmp(str, "SINGLE") == 0 || strcmp(str, "single") == 0) {
             threadLevel = MPI_THREAD_SINGLE;
-        }
-        else {
+        } else {
             fprintf(stderr, "Unrecognized thread level %s\n", str);
             /* Use exit since MPI_Init/Init_thread has not been called. */
             exit(1);
@@ -208,8 +200,7 @@ void MTest_Finalize(int errs)
     if (rank == 0) {
         if (toterrs) {
             printf(" Found %d errors\n", toterrs);
-        }
-        else {
+        } else {
             printf(" No Errors\n");
         }
         fflush(stdout);
@@ -351,11 +342,9 @@ int MTestGetIntracommGeneral(MPI_Comm * comm, int min_size, int allowSmaller)
                         MTestPrintError(merr);
                     if (rank == 0) {
                         rleader = size / 2;
-                    }
-                    else if (rank == size / 2) {
+                    } else if (rank == size / 2) {
                         rleader = 0;
-                    }
-                    else {
+                    } else {
                         rleader = -1;
                     }
                     isLeft = rank < size / 2;
@@ -370,8 +359,7 @@ int MTestGetIntracommGeneral(MPI_Comm * comm, int min_size, int allowSmaller)
                     MPI_Comm_free(&inter_comm);
                     MPI_Comm_free(&local_comm);
                     intraCommName = "Dup of WORLD created by MPI_Intercomm_merge";
-                }
-                else {
+                } else {
                     *comm = MPI_COMM_NULL;
                 }
             }
@@ -401,14 +389,12 @@ int MTestGetIntracommGeneral(MPI_Comm * comm, int min_size, int allowSmaller)
                         /* Even processes create a comm. for themselves */
                         MPI_Comm_create_group(MPI_COMM_WORLD, even_group, 0, comm);
                         intraCommName = "Even of WORLD created by MPI_Comm_create_group";
-                    }
-                    else {
+                    } else {
                         *comm = MPI_COMM_NULL;
                     }
 
                     MPI_Group_free(&even_group);
-                }
-                else {
+                } else {
                     *comm = MPI_COMM_NULL;
                 }
 #else
@@ -438,8 +424,7 @@ int MTestGetIntracommGeneral(MPI_Comm * comm, int min_size, int allowSmaller)
                     MPI_Group_free(&world_group);
                     MPI_Group_free(&high_group);
                     intraCommName = "High half of WORLD created by MPI_Comm_create";
-                }
-                else {
+                } else {
                     *comm = MPI_COMM_NULL;
                 }
             }
@@ -469,12 +454,10 @@ int MTestGetIntracommGeneral(MPI_Comm * comm, int min_size, int allowSmaller)
                         if (merr)
                             MTestPrintError(merr);
                         *comm = MPI_COMM_NULL;
-                    }
-                    else {
+                    } else {
                         intraCommName = "Split of WORLD";
                     }
-                }
-                else {
+                } else {
                     /* Act like default */
                     *comm = MPI_COMM_NULL;
                     intraCommIdx = -1;
@@ -495,8 +478,7 @@ int MTestGetIntracommGeneral(MPI_Comm * comm, int min_size, int allowSmaller)
                 MTestPrintError(merr);
             if (size >= min_size)
                 done = 1;
-        }
-        else {
+        } else {
             intraCommName = "MPI_COMM_NULL";
             isBasic = 1;
             done = 1;
@@ -570,11 +552,9 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                     MTestPrintError(merr);
                 if (rank == 0) {
                     rleader = size / 2;
-                }
-                else if (rank == size / 2) {
+                } else if (rank == size / 2) {
                     rleader = 0;
-                }
-                else {
+                } else {
                     /* Remote leader is signficant only for the processes
                      * designated local leaders */
                     rleader = -1;
@@ -584,8 +564,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                 if (merr)
                     MTestPrintError(merr);
                 interCommName = "Intercomm by splitting MPI_COMM_WORLD";
-            }
-            else
+            } else
                 *comm = MPI_COMM_NULL;
             break;
         case 1:
@@ -602,11 +581,9 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                     MTestPrintError(merr);
                 if (rank == 0) {
                     rleader = 1;
-                }
-                else if (rank == 1) {
+                } else if (rank == 1) {
                     rleader = 0;
-                }
-                else {
+                } else {
                     /* Remote leader is signficant only for the processes
                      * designated local leaders */
                     rleader = -1;
@@ -616,8 +593,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                 if (merr)
                     MTestPrintError(merr);
                 interCommName = "Intercomm by splitting MPI_COMM_WORLD into 1, rest";
-            }
-            else
+            } else
                 *comm = MPI_COMM_NULL;
             break;
 
@@ -635,11 +611,9 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                     MTestPrintError(merr);
                 if (rank == 0) {
                     rleader = 2;
-                }
-                else if (rank == 2) {
+                } else if (rank == 2) {
                     rleader = 0;
-                }
-                else {
+                } else {
                     /* Remote leader is signficant only for the processes
                      * designated local leaders */
                     rleader = -1;
@@ -649,8 +623,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                 if (merr)
                     MTestPrintError(merr);
                 interCommName = "Intercomm by splitting MPI_COMM_WORLD into 2, rest";
-            }
-            else
+            } else
                 *comm = MPI_COMM_NULL;
             break;
 
@@ -668,11 +641,9 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                     MTestPrintError(merr);
                 if (rank == 0) {
                     rleader = size / 2;
-                }
-                else if (rank == size / 2) {
+                } else if (rank == size / 2) {
                     rleader = 0;
-                }
-                else {
+                } else {
                     /* Remote leader is signficant only for the processes
                      * designated local leaders */
                     rleader = -1;
@@ -692,8 +663,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                 if (merr)
                     MTestPrintError(merr);
                 interCommName = "Intercomm by splitting MPI_COMM_WORLD then dup'ing";
-            }
-            else
+            } else
                 *comm = MPI_COMM_NULL;
             break;
 
@@ -711,11 +681,9 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                     MTestPrintError(merr);
                 if (rank == 0) {
                     rleader = size / 2;
-                }
-                else if (rank == size / 2) {
+                } else if (rank == size / 2) {
                     rleader = 0;
-                }
-                else {
+                } else {
                     /* Remote leader is signficant only for the processes
                      * designated local leaders */
                     rleader = -1;
@@ -739,8 +707,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                 if (merr)
                     MTestPrintError(merr);
                 interCommName = "Intercomm by splitting MPI_COMM_WORLD then then splitting again";
-            }
-            else
+            } else
                 *comm = MPI_COMM_NULL;
             break;
 
@@ -764,11 +731,9 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
 
                 if (rank == 1) {
                     rleader = size / 2;
-                }
-                else if (rank == (size / 2)) {
+                } else if (rank == (size / 2)) {
                     rleader = 1;
-                }
-                else {
+                } else {
                     /* Remote leader is signficant only for the processes
                      * designated local leaders */
                     rleader = -1;
@@ -781,8 +746,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                 }
                 interCommName =
                     "Intercomm by splitting MPI_COMM_WORLD (discarding rank 0 in the left group) then MPI_Intercomm_create'ing";
-            }
-            else {
+            } else {
                 *comm = MPI_COMM_NULL;
             }
             break;
@@ -808,11 +772,9 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
 
                 if (rank == 0) {
                     rleader = size / 2;
-                }
-                else if (rank == (size / 2)) {
+                } else if (rank == (size / 2)) {
                     rleader = 0;
-                }
-                else {
+                } else {
                     /* Remote leader is signficant only for the processes
                      * designated local leaders */
                     rleader = -1;
@@ -844,8 +806,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
 
                 interCommName =
                     "Intercomm by splitting MPI_COMM_WORLD then discarding 0 ranks with MPI_Comm_create";
-            }
-            else {
+            } else {
                 *comm = MPI_COMM_NULL;
             }
             break;
@@ -865,8 +826,7 @@ int MTestGetIntercomm(MPI_Comm * comm, int *isLeftGroup, int min_size)
                 MTestPrintError(merr);
             if (size + remsize >= min_size)
                 done = 1;
-        }
-        else {
+        } else {
             interCommName = "MPI_COMM_NULL";
             done = 1;
         }
@@ -1143,8 +1103,7 @@ static void MTestResourceSummary(FILE * fp)
             fprintf(fp, "RUSAGE: context switch = %ld : %ld\n",
                     (long) ru.ru_nvcsw, (long) ru.ru_nivcsw);
         }
-    }
-    else {
+    } else {
         fprintf(fp, "RUSAGE: return error %d\n", errno);
     }
 #endif
@@ -1278,8 +1237,7 @@ void MTestFreeWin(MPI_Win * win)
         if (flag) {
             if (val == (void *) 1) {
                 free(addr);
-            }
-            else if (val == (void *) 2) {
+            } else if (val == (void *) 2) {
                 merr = MPI_Free_mem(addr);
                 if (merr)
                     MTestPrintError(merr);
@@ -1329,8 +1287,7 @@ int MTestSpawnPossible(int *can_spawn)
         /* MPI_UNIVERSE_SIZE keyval missing from MPI_COMM_WORLD attributes */
         *can_spawn = -1;
         errs++;
-    }
-    else {
+    } else {
         /* MPI_UNIVERSE_SIZE need not be set */
         if (flag) {
 
@@ -1346,12 +1303,10 @@ int MTestSpawnPossible(int *can_spawn)
             if (vval <= size) {
                 /* no additional processes can be spawned */
                 *can_spawn = 0;
-            }
-            else {
+            } else {
                 *can_spawn = 1;
             }
-        }
-        else {
+        } else {
             /* No attribute associated with key MPI_UNIVERSE_SIZE of MPI_COMM_WORLD */
             *can_spawn = -1;
         }

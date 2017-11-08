@@ -6,7 +6,7 @@
 
 #include "mpiimpl.h"
 #include "mpicomm.h"
-#include "mpir_info.h"    /* MPIR_Info_free */
+#include "mpir_info.h"  /* MPIR_Info_free */
 
 #include "utlist.h"
 #include "uthash.h"
@@ -19,8 +19,10 @@
 
 /* Preallocated comm objects */
 /* initialized in initthread.c */
-MPIR_Comm MPIR_Comm_builtin[MPIR_COMM_N_BUILTIN] = { {0} };
-MPIR_Comm MPIR_Comm_direct[MPID_COMM_PREALLOC] = { {0} };
+MPIR_Comm MPIR_Comm_builtin[MPIR_COMM_N_BUILTIN] = { {0}
+};
+MPIR_Comm MPIR_Comm_direct[MPID_COMM_PREALLOC] = { {0}
+};
 
 MPIR_Object_alloc_t MPIR_Comm_mem = {
     0,
@@ -183,10 +185,10 @@ int MPII_Setup_intercomm_localcomm(MPIR_Comm * intercomm_ptr)
     localcomm_ptr->context_id = localcomm_ptr->recvcontext_id;
 
     MPL_DBG_MSG_FMT(MPIR_DBG_COMM, TYPICAL,
-                     (MPL_DBG_FDEST,
-                      "setup_intercomm_localcomm ic=%p ic->context_id=%d ic->recvcontext_id=%d lc->recvcontext_id=%d",
-                      intercomm_ptr, intercomm_ptr->context_id, intercomm_ptr->recvcontext_id,
-                      localcomm_ptr->recvcontext_id));
+                    (MPL_DBG_FDEST,
+                     "setup_intercomm_localcomm ic=%p ic->context_id=%d ic->recvcontext_id=%d lc->recvcontext_id=%d",
+                     intercomm_ptr, intercomm_ptr->context_id, intercomm_ptr->recvcontext_id,
+                     localcomm_ptr->recvcontext_id));
 
     /* Save the kind of the communicator */
     localcomm_ptr->comm_kind = MPIR_COMM_KIND__INTRACOMM;
@@ -397,8 +399,7 @@ static int set_collops(MPIR_Comm * comm)
     if (comm->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
         /* FIXME MT what protects access to this structure and ic_default_collops? */
         comm->coll_fns = default_collops[comm->hierarchy_kind];
-    }
-    else {      /* intercomm */
+    } else {    /* intercomm */
         comm->coll_fns = ic_default_collops;
     }
 
@@ -425,7 +426,8 @@ int MPIR_Comm_map_irregular(MPIR_Comm * newcomm, MPIR_Comm * src_comm,
 
     MPIR_FUNC_TERSE_ENTER(MPID_STATE_MPIR_COMM_MAP_TYPE__IRREGULAR);
 
-    MPIR_CHKPMEM_MALLOC(mapper, MPIR_Comm_map_t *, sizeof(MPIR_Comm_map_t), mpi_errno, "mapper", MPL_MEM_COMM);
+    MPIR_CHKPMEM_MALLOC(mapper, MPIR_Comm_map_t *, sizeof(MPIR_Comm_map_t), mpi_errno, "mapper",
+                        MPL_MEM_COMM);
 
     mapper->type = MPIR_COMM_MAP_TYPE__IRREGULAR;
     mapper->src_comm = src_comm;
@@ -435,10 +437,10 @@ int MPIR_Comm_map_irregular(MPIR_Comm * newcomm, MPIR_Comm * src_comm,
     if (src_mapping) {
         mapper->src_mapping = src_mapping;
         mapper->free_mapping = 0;
-    }
-    else {
+    } else {
         MPIR_CHKPMEM_MALLOC(mapper->src_mapping, int *,
-                            src_mapping_size * sizeof(int), mpi_errno, "mapper mapping", MPL_MEM_COMM);
+                            src_mapping_size * sizeof(int), mpi_errno, "mapper mapping",
+                            MPL_MEM_COMM);
         mapper->free_mapping = 1;
     }
 
@@ -471,7 +473,8 @@ int MPIR_Comm_map_dup(MPIR_Comm * newcomm, MPIR_Comm * src_comm, MPIR_Comm_map_d
 
     MPIR_FUNC_TERSE_ENTER(MPID_STATE_MPIR_COMM_MAP_TYPE__DUP);
 
-    MPIR_CHKPMEM_MALLOC(mapper, MPIR_Comm_map_t *, sizeof(MPIR_Comm_map_t), mpi_errno, "mapper", MPL_MEM_COMM);
+    MPIR_CHKPMEM_MALLOC(mapper, MPIR_Comm_map_t *, sizeof(MPIR_Comm_map_t), mpi_errno, "mapper",
+                        MPL_MEM_COMM);
 
     mapper->type = MPIR_COMM_MAP_TYPE__DUP;
     mapper->src_comm = src_comm;
@@ -552,8 +555,7 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
 
     MPIR_Comm_map_free(comm);
 
-    if (comm->comm_kind == MPIR_COMM_KIND__INTRACOMM &&
-            !MPIR_CONTEXT_READ_FIELD(SUBCOMM,comm->context_id)) {  /*make sure this is not a subcomm*/
+    if (comm->comm_kind == MPIR_COMM_KIND__INTRACOMM && !MPIR_CONTEXT_READ_FIELD(SUBCOMM, comm->context_id)) {  /*make sure this is not a subcomm */
 
         mpi_errno = MPIR_Find_local_and_external(comm,
                                                  &num_local, &local_rank, &local_procs,
@@ -566,8 +568,8 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
 
             /* Non-fatal errors simply mean that this communicator will not have
              * any node awareness.  Node-aware collectives are an optimization. */
-            MPL_DBG_MSG_P(MPIR_DBG_COMM, VERBOSE, "MPIR_Find_local_and_external failed for comm_ptr=%p",
-                           comm);
+            MPL_DBG_MSG_P(MPIR_DBG_COMM, VERBOSE,
+                          "MPIR_Find_local_and_external failed for comm_ptr=%p", comm);
             if (comm->intranode_table)
                 MPL_free(comm->intranode_table);
             if (comm->internode_table)
@@ -585,9 +587,9 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
 
         /* check whether the communicator resides inside a node */
         if (comm->local_size == num_local) {
-            comm->is_single_node = (char)1;
+            comm->is_single_node = (char) 1;
         } else {
-            comm->is_single_node = (char)0;
+            comm->is_single_node = (char) 0;
         }
         /* if the node_roots_comm and comm would be the same size, then creating
          * the second communicator is useless and wasteful. */
@@ -608,7 +610,7 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
             comm->node_comm->comm_kind = MPIR_COMM_KIND__INTRACOMM;
             comm->node_comm->hierarchy_kind = MPIR_COMM_HIERARCHY_KIND__NODE;
             comm->node_comm->local_comm = NULL;
-            comm->node_comm->is_single_node = (char)1;
+            comm->node_comm->is_single_node = (char) 1;
             MPL_DBG_MSG_D(MPIR_DBG_COMM, VERBOSE, "Create node_comm=%p\n", comm->node_comm);
 
             comm->node_comm->local_size = num_local;
@@ -643,9 +645,10 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
             comm->node_roots_comm->comm_kind = MPIR_COMM_KIND__INTRACOMM;
             comm->node_roots_comm->hierarchy_kind = MPIR_COMM_HIERARCHY_KIND__NODE_ROOTS;
             comm->node_roots_comm->local_comm = NULL;
-            MPL_DBG_MSG_D(MPIR_DBG_COMM, VERBOSE, "Create node_roots_comm=%p\n", comm->node_roots_comm);
+            MPL_DBG_MSG_D(MPIR_DBG_COMM, VERBOSE, "Create node_roots_comm=%p\n",
+                          comm->node_roots_comm);
 
-            comm->node_roots_comm->is_single_node = (char)0;
+            comm->node_roots_comm->is_single_node = (char) 0;
             comm->node_roots_comm->local_size = num_external;
             comm->node_roots_comm->remote_size = num_external;
 
@@ -744,8 +747,7 @@ int MPII_Comm_copy(MPIR_Comm * comm_ptr, int size, MPIR_Comm ** outcomm_ptr)
         mpi_errno = MPIR_Get_intercomm_contextid(comm_ptr, &new_context_id, &new_recvcontext_id);
         if (mpi_errno)
             MPIR_ERR_POP(mpi_errno);
-    }
-    else {
+    } else {
         mpi_errno = MPIR_Get_contextid_sparse(comm_ptr, &new_context_id, FALSE);
         new_recvcontext_id = new_context_id;
         if (mpi_errno)
@@ -786,14 +788,15 @@ int MPII_Comm_copy(MPIR_Comm * comm_ptr, int size, MPIR_Comm ** outcomm_ptr)
             MPIR_Comm_map_dup(newcomm_ptr, comm_ptr, MPIR_COMM_MAP_DIR__L2L);
         else
             MPIR_Comm_map_dup(newcomm_ptr, comm_ptr, MPIR_COMM_MAP_DIR__R2R);
-    }
-    else {
+    } else {
         int i;
 
         if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM)
-            MPIR_Comm_map_irregular(newcomm_ptr, comm_ptr, NULL, size, MPIR_COMM_MAP_DIR__L2L, &map);
+            MPIR_Comm_map_irregular(newcomm_ptr, comm_ptr, NULL, size, MPIR_COMM_MAP_DIR__L2L,
+                                    &map);
         else
-            MPIR_Comm_map_irregular(newcomm_ptr, comm_ptr, NULL, size, MPIR_COMM_MAP_DIR__R2R, &map);
+            MPIR_Comm_map_irregular(newcomm_ptr, comm_ptr, NULL, size, MPIR_COMM_MAP_DIR__R2R,
+                                    &map);
         for (i = 0; i < size; i++) {
             /* For rank i in the new communicator, find the corresponding
              * rank in the input communicator */
@@ -812,8 +815,7 @@ int MPII_Comm_copy(MPIR_Comm * comm_ptr, int size, MPIR_Comm ** outcomm_ptr)
         newcomm_ptr->local_size = comm_ptr->local_size;
         newcomm_ptr->remote_size = comm_ptr->remote_size;
         newcomm_ptr->is_low_group = comm_ptr->is_low_group;
-    }
-    else {
+    } else {
         newcomm_ptr->local_size = size;
         newcomm_ptr->remote_size = size;
     }
@@ -1037,8 +1039,7 @@ int MPIR_Comm_delete_internal(MPIR_Comm * comm_ptr)
          * be freed */
         if (!(HANDLE_GET_KIND(comm_ptr->handle) == HANDLE_KIND_BUILTIN))
             MPIR_Handle_obj_free(&MPIR_Comm_mem, comm_ptr);
-    }
-    else {
+    } else {
         /* If the user attribute free function returns an error,
          * then do not free the communicator */
         MPIR_Comm_add_ref(comm_ptr);

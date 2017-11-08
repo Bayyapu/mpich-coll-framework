@@ -97,8 +97,7 @@ int main(int argc, char *argv[])
             i++;
             if (i < argc) {
                 ntest = atoi(argv[i]);
-            }
-            else {
+            } else {
                 fprintf(stderr, "Missing value for -ntest\n");
                 MPI_Abort(MPI_COMM_WORLD, 1);
             }
@@ -113,8 +112,7 @@ int main(int argc, char *argv[])
     if (wrank == master) {
         bufsize = RMA_SIZE;
         MPI_Alloc_mem(bufsize * sizeof(int), MPI_INFO_NULL, &rmabuffer);
-    }
-    else if (wrank == partner) {
+    } else if (wrank == partner) {
         getbufsize = RMA_SIZE;
         getbuf = (int *) malloc(getbufsize * sizeof(int));
         if (!getbuf) {
@@ -142,16 +140,14 @@ int main(int argc, char *argv[])
             MPI_Win_unlock(master, win);
             MPI_Recv(MPI_BOTTOM, 0, MPI_INT, partner, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             errs += RMACheck(i, rmabuffer, bufsize);
-        }
-        else if (wrank == partner) {
+        } else if (wrank == partner) {
             MPI_Recv(MPI_BOTTOM, 0, MPI_INT, master, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, master, win);
             RMATest(i, win, master, srcbuf, RMA_SIZE, getbuf, getbufsize);
             MPI_Win_unlock(master, win);
             errs += RMACheckGet(i, win, getbuf, getbufsize);
             MPI_Send(MPI_BOTTOM, 0, MPI_INT, master, i, MPI_COMM_WORLD);
-        }
-        else {
+        } else {
             MPI_Recv(MPI_BOTTOM, 0, MPI_INT, MPI_ANY_SOURCE, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Send(MPI_BOTTOM, 0, MPI_INT, next, i, MPI_COMM_WORLD);
         }

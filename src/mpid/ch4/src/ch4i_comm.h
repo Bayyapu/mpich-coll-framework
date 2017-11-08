@@ -71,8 +71,7 @@ static inline int MPIDI_detect_regular_model(int *lpid, int size,
         if (off == 0) {
             ret = MPIDI_SRC_MAPPER_DIRECT;
             goto fn_exit;
-        }
-        else {
+        } else {
             *offset = off;
             ret = MPIDI_SRC_MAPPER_OFFSET;
             goto fn_exit;
@@ -570,8 +569,7 @@ static inline void MPIDI_stride_of_src_rmap(MPIDI_rank_map_t * src,
     case MPIDI_RANK_MAP_DIRECT_INTRA:
         if (blocksize == 1) {
             dest->mode = MPIDI_RANK_MAP_STRIDE_INTRA;
-        }
-        else {
+        } else {
             dest->mode = MPIDI_RANK_MAP_STRIDE_BLOCK_INTRA;
         }
         dest->size = MPIDI_map_size(*mapper);
@@ -584,8 +582,7 @@ static inline void MPIDI_stride_of_src_rmap(MPIDI_rank_map_t * src,
     case MPIDI_RANK_MAP_DIRECT:
         if (blocksize == 1) {
             dest->mode = MPIDI_RANK_MAP_STRIDE;
-        }
-        else {
+        } else {
             dest->mode = MPIDI_RANK_MAP_STRIDE_BLOCK;
         }
         dest->size = MPIDI_map_size(*mapper);
@@ -598,8 +595,7 @@ static inline void MPIDI_stride_of_src_rmap(MPIDI_rank_map_t * src,
     case MPIDI_RANK_MAP_OFFSET:
         if (blocksize == 1) {
             dest->mode = MPIDI_RANK_MAP_STRIDE;
-        }
-        else {
+        } else {
             dest->mode = MPIDI_RANK_MAP_STRIDE_BLOCK;
         }
         dest->size = MPIDI_map_size(*mapper);
@@ -610,8 +606,7 @@ static inline void MPIDI_stride_of_src_rmap(MPIDI_rank_map_t * src,
     case MPIDI_RANK_MAP_OFFSET_INTRA:
         if (blocksize == 1) {
             dest->mode = MPIDI_RANK_MAP_STRIDE_INTRA;
-        }
-        else {
+        } else {
             dest->mode = MPIDI_RANK_MAP_STRIDE_BLOCK_INTRA;
         }
         dest->size = MPIDI_map_size(*mapper);
@@ -625,8 +620,7 @@ static inline void MPIDI_stride_of_src_rmap(MPIDI_rank_map_t * src,
             dest->reg.stride.stride = src->reg.stride.stride * stride;
             dest->reg.stride.blocksize = blocksize;
             dest->reg.stride.offset = src->reg.stride.stride * offset + src->reg.stride.offset;
-        }
-        else {
+        } else {
             MPIDI_src_map_to_lut(src, dest, mapper, mapper->src_mapping_size, 0);
         }
         break;
@@ -636,8 +630,7 @@ static inline void MPIDI_stride_of_src_rmap(MPIDI_rank_map_t * src,
             dest->reg.stride.stride = src->reg.stride.stride * stride;
             dest->reg.stride.blocksize = blocksize;
             dest->reg.stride.offset = src->reg.stride.stride * offset + src->reg.stride.offset;
-        }
-        else {
+        } else {
             MPIDI_src_map_to_lut(src, dest, mapper, mapper->src_mapping_size, 0);
         }
         break;
@@ -692,8 +685,7 @@ static inline int MPIDI_check_convert_mlut_to_lut(MPIDI_rank_map_t * src)
     src->avtid = avtid;
     if (avtid == 0) {
         src->mode = MPIDI_RANK_MAP_LUT_INTRA;
-    }
-    else {
+    } else {
         src->mode = MPIDI_RANK_MAP_LUT;
     }
     mlut = src->irreg.mlut.t;
@@ -770,8 +762,7 @@ static inline int MPIDI_check_convert_lut_to_regular(MPIDI_rank_map_t * src)
             if (src->avtid == 0) {
                 src->mode = MPIDI_RANK_MAP_STRIDE_INTRA;
             }
-        }
-        else {
+        } else {
             src->mode = MPIDI_RANK_MAP_STRIDE_BLOCK;
             if (src->avtid == 0) {
                 src->mode = MPIDI_RANK_MAP_STRIDE_BLOCK_INTRA;
@@ -842,8 +833,7 @@ static inline int MPIDI_set_map(MPIDI_rank_map_t * src_rmap,
             if (src_rmap->mode == MPIDI_RANK_MAP_MLUT) {
                 MPIDI_src_mlut_to_mlut(src_rmap, dest_rmap, mapper, total_mapper_size,
                                        mapper_offset);
-            }
-            else {
+            } else {
                 MPIDI_src_map_to_lut(src_rmap, dest_rmap, mapper, mapper->src_mapping_size,
                                      mapper_offset);
             }
@@ -864,8 +854,7 @@ static inline int MPIDI_set_map(MPIDI_rank_map_t * src_rmap,
                          MPIDI_map_size(*mapper), src_comm_size));
         MPIDI_src_comm_to_mlut(src_rmap, dest_rmap, src_comm_size,
                                total_mapper_size, mapper_offset);
-    }
-    else {      /* mapper->type == MPIR_COMM_MAP_TYPE__IRREGULAR */
+    } else {    /* mapper->type == MPIR_COMM_MAP_TYPE__IRREGULAR */
         MPIDI_src_mlut_to_mlut(src_rmap, dest_rmap, mapper, total_mapper_size, mapper_offset);
     }
 
@@ -927,26 +916,23 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_comm_create_rank_map(MPIR_Comm * comm)
                                  src_comm->local_size, total_mapper_size, mapper_offset));
                 MPIDI_set_map(&MPIDI_COMM(src_comm, map), &MPIDI_COMM(comm, map), mapper,
                               src_comm->local_size, total_mapper_size, mapper_offset);
-            }
-            else if (src_comm->comm_kind == MPIR_COMM_KIND__INTRACOMM &&
-                     comm->comm_kind == MPIR_COMM_KIND__INTERCOMM) {
+            } else if (src_comm->comm_kind == MPIR_COMM_KIND__INTRACOMM &&
+                       comm->comm_kind == MPIR_COMM_KIND__INTERCOMM) {
                 MPL_DBG_MSG_FMT(MPIDI_CH4_DBG_MAP, VERBOSE,
                                 (MPL_DBG_FDEST,
                                  " intra->inter, L2L, size=%d, total_mapper_size=%d, mapper_offset=%d",
                                  src_comm->local_size, total_mapper_size, mapper_offset));
                 MPIDI_set_map(&MPIDI_COMM(src_comm, map), &MPIDI_COMM(comm, local_map), mapper,
                               src_comm->local_size, total_mapper_size, mapper_offset);
-            }
-            else if (src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM &&
-                     comm->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+            } else if (src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM &&
+                       comm->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
                 MPL_DBG_MSG_FMT(MPIDI_CH4_DBG_MAP, VERBOSE,
                                 (MPL_DBG_FDEST,
                                  " inter->intra, L2L, size=%d, total_mapper_size=%d, mapper_offset=%d",
                                  src_comm->local_size, total_mapper_size, mapper_offset));
                 MPIDI_set_map(&MPIDI_COMM(src_comm, local_map), &MPIDI_COMM(comm, map), mapper,
                               src_comm->local_size, total_mapper_size, mapper_offset);
-            }
-            else {      /* src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM && comm->comm_kind == MPIR_COMM_KIND__INTERCOMM */
+            } else {    /* src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM && comm->comm_kind == MPIR_COMM_KIND__INTERCOMM */
                 MPL_DBG_MSG_FMT(MPIDI_CH4_DBG_MAP, VERBOSE,
                                 (MPL_DBG_FDEST,
                                  " inter->inter, L2L, size=%d, total_mapper_size=%d, mapper_offset=%d",
@@ -954,8 +940,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_comm_create_rank_map(MPIR_Comm * comm)
                 MPIDI_set_map(&MPIDI_COMM(src_comm, local_map), &MPIDI_COMM(comm, local_map),
                               mapper, src_comm->local_size, total_mapper_size, mapper_offset);
             }
-        }
-        else {  /* mapper->dir == MPIR_COMM_MAP_DIR__R2L */
+        } else {        /* mapper->dir == MPIR_COMM_MAP_DIR__R2L */
             MPIR_Assert(src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM);
 
             if (comm->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
@@ -965,8 +950,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_comm_create_rank_map(MPIR_Comm * comm)
                                  src_comm->remote_size, total_mapper_size, mapper_offset));
                 MPIDI_set_map(&MPIDI_COMM(src_comm, map), &MPIDI_COMM(comm, map), mapper,
                               src_comm->remote_size, total_mapper_size, mapper_offset);
-            }
-            else {
+            } else {
                 MPL_DBG_MSG_FMT(MPIDI_CH4_DBG_MAP, VERBOSE,
                                 (MPL_DBG_FDEST,
                                  " ->inter, R2L, size=%d, total_mapper_size=%d, mapper_offset=%d",
@@ -1006,8 +990,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_comm_create_rank_map(MPIR_Comm * comm)
                                  src_comm->local_size, total_mapper_size, mapper_offset));
                 MPIDI_set_map(&MPIDI_COMM(src_comm, map), &MPIDI_COMM(comm, map), mapper,
                               src_comm->local_size, total_mapper_size, mapper_offset);
-            }
-            else {      /* src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM */
+            } else {    /* src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM */
                 MPL_DBG_MSG_FMT(MPIDI_CH4_DBG_MAP, VERBOSE,
                                 (MPL_DBG_FDEST,
                                  " inter->, L2R, size=%d, total_mapper_size=%d, mapper_offset=%d",
@@ -1015,8 +998,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_comm_create_rank_map(MPIR_Comm * comm)
                 MPIDI_set_map(&MPIDI_COMM(src_comm, local_map), &MPIDI_COMM(comm, map), mapper,
                               src_comm->local_size, total_mapper_size, mapper_offset);
             }
-        }
-        else {  /* mapper->dir == MPIR_COMM_MAP_DIR__R2R */
+        } else {        /* mapper->dir == MPIR_COMM_MAP_DIR__R2R */
             MPIR_Assert(src_comm->comm_kind == MPIR_COMM_KIND__INTERCOMM);
             MPL_DBG_MSG_FMT(MPIDI_CH4_DBG_MAP, VERBOSE,
                             (MPL_DBG_FDEST,
@@ -1056,7 +1038,6 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_comm_create_rank_map(MPIR_Comm * comm)
     if (comm->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
         MPIDI_COMM(comm, local_map).mode = MPIDI_RANK_MAP_NONE;
     }
-
 #ifdef MPL_USE_DBG_LOGGING
     int rank_;
     int avtid_, lpid_ = -1;
@@ -1108,8 +1089,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_check_disjoint_lupids(int lupids1[], int n1,
     if (mask_size > 128) {
         MPIR_CHKLMEM_MALLOC(lupidmask, uint32_t *, mask_size * sizeof(uint32_t),
                             mpi_errno, "lupidmask", MPL_MEM_COMM);
-    }
-    else {
+    } else {
         lupidmask = lupidmaskPrealloc;
     }
 

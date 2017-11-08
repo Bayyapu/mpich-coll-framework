@@ -187,7 +187,7 @@ struct {								\
 	}								\
 	else {								\
 		struct type *curelm = (head)->slh_first;		\
-		while(curelm->field.sle_next != (elm))			\
+		while (curelm->field.sle_next != (elm))			\
 			curelm = curelm->field.sle_next;		\
 		curelm->field.sle_next =				\
 		    curelm->field.sle_next->field.sle_next;		\
@@ -571,4 +571,4 @@ struct {								\
 	    ? ((head)->cqh_last)					\
 	    : (elm->field.cqe_prev))
 
-#endif	/* queue.h */
+#endif /* queue.h */

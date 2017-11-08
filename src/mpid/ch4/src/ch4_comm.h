@@ -27,7 +27,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Comm_AS_enabled(MPIR_Comm * comm)
 }
 
 MPL_STATIC_INLINE_PREFIX int MPID_Comm_reenable_anysource(MPIR_Comm * comm,
-                                                           MPIR_Group ** failed_group_ptr)
+                                                          MPIR_Group ** failed_group_ptr)
 {
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_COMM_REENABLE_ANYSOURCE);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_COMM_REENABLE_ANYSOURCE);
@@ -39,7 +39,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Comm_reenable_anysource(MPIR_Comm * comm,
 }
 
 MPL_STATIC_INLINE_PREFIX int MPID_Comm_remote_group_failed(MPIR_Comm * comm,
-                                                            MPIR_Group ** failed_group_ptr)
+                                                           MPIR_Group ** failed_group_ptr)
 {
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_COMM_REMOTE_GROUP_FAILED);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_COMM_REMOTE_GROUP_FAILED);
@@ -51,7 +51,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Comm_remote_group_failed(MPIR_Comm * comm,
 }
 
 MPL_STATIC_INLINE_PREFIX int MPID_Comm_group_failed(MPIR_Comm * comm_ptr,
-                                                     MPIR_Group ** failed_group_ptr)
+                                                    MPIR_Group ** failed_group_ptr)
 {
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_COMM_GROUP_FAILED);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_COMM_GROUP_FAILED);
@@ -74,7 +74,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Comm_failure_ack(MPIR_Comm * comm_ptr)
 }
 
 MPL_STATIC_INLINE_PREFIX int MPID_Comm_failure_get_acked(MPIR_Comm * comm_ptr,
-                                                          MPIR_Group ** failed_group_ptr)
+                                                         MPIR_Group ** failed_group_ptr)
 {
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_COMM_FAILURE_GET_ACKED);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_COMM_FAILURE_GET_ACKED);
@@ -97,7 +97,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Comm_revoke(MPIR_Comm * comm_ptr, int is_remot
 }
 
 MPL_STATIC_INLINE_PREFIX int MPID_Comm_get_all_failed_procs(MPIR_Comm * comm_ptr,
-                                                             MPIR_Group ** failed_group, int tag)
+                                                            MPIR_Group ** failed_group, int tag)
 {
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_COMM_GET_ALL_FAILED_PROCS);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_COMM_GET_ALL_FAILED_PROCS);
@@ -128,8 +128,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Comm_split_type(MPIR_Comm * comm_ptr,
         MPID_Comm_get_lpid(comm_ptr, comm_ptr->rank, &idx, FALSE);
         MPID_Get_node_id(comm_ptr, comm_ptr->rank, &node_id);
         mpi_errno = MPIR_Comm_split_impl(comm_ptr, node_id, key, newcomm_ptr);
-    }
-    else
+    } else
         mpi_errno = MPIR_Comm_split_impl(comm_ptr, MPI_UNDEFINED, key, newcomm_ptr);
 
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_COMM_SPLIT_TYPE);
@@ -297,11 +296,11 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Comm_free_hook(MPIR_Comm * comm)
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
 MPL_STATIC_INLINE_PREFIX int MPID_Intercomm_exchange_map(MPIR_Comm * local_comm,
-                                                          int local_leader,
-                                                          MPIR_Comm * peer_comm,
-                                                          int remote_leader,
-                                                          int *remote_size,
-                                                          int **remote_lupids, int *is_low_group)
+                                                         int local_leader,
+                                                         MPIR_Comm * peer_comm,
+                                                         int remote_leader,
+                                                         int *remote_size,
+                                                         int **remote_lupids, int *is_low_group)
 {
     int mpi_errno = MPI_SUCCESS;
     int i;
@@ -341,8 +340,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Intercomm_exchange_map(MPIR_Comm * local_comm,
         if (local_avtid == 0 && remote_avtid == 0) {
             pure_intracomm = 1;
             local_size_send = local_size;
-        }
-        else {
+        } else {
             local_size_send = local_size | MPIDI_DYNPROC_MASK;
         }
 
@@ -408,10 +406,10 @@ MPL_STATIC_INLINE_PREFIX int MPID_Intercomm_exchange_map(MPIR_Comm * local_comm,
                 MPIR_ERR_POP(mpi_errno);
 
             MPIR_CHKLMEM_MALLOC(local_node_ids, int *,
-                                local_size * sizeof(int), mpi_errno, "local_node_ids", MPL_MEM_ADDRESS);
-            MPIR_CHKLMEM_MALLOC(remote_node_ids, int *,
-                                (*remote_size) * sizeof(int),
-                                mpi_errno, "remote_node_ids", MPL_MEM_ADDRESS);
+                                local_size * sizeof(int), mpi_errno, "local_node_ids",
+                                MPL_MEM_ADDRESS);
+            MPIR_CHKLMEM_MALLOC(remote_node_ids, int *, (*remote_size) * sizeof(int), mpi_errno,
+                                "remote_node_ids", MPL_MEM_ADDRESS);
             for (i = 0; i < local_size; i++) {
                 MPIDI_CH4U_get_node_id(local_comm, i, &local_node_ids[i]);
             }
@@ -425,9 +423,8 @@ MPL_STATIC_INLINE_PREFIX int MPID_Intercomm_exchange_map(MPIR_Comm * local_comm,
 
             /* Stage 1.2 convert remote UPID to LUPID and get LUPID for local group */
             MPIDIU_upids_to_lupids(*remote_size, remote_upid_size, remote_upids,
-                                  remote_lupids, remote_node_ids);
-        }
-        else {
+                                   remote_lupids, remote_node_ids);
+        } else {
             /* Stage 1.1f only exchange LUPIDS if no dynamic process involved */
             mpi_errno = MPIC_Sendrecv(local_lupids, local_size, MPI_INT,
                                       remote_leader, cts_tag,
@@ -475,12 +472,10 @@ MPL_STATIC_INLINE_PREFIX int MPID_Intercomm_exchange_map(MPIR_Comm * local_comm,
          */
         if (pure_intracomm) {
             *is_low_group = local_lupids[0] < (*remote_lupids)[0];
-        }
-        else {
+        } else {
             if (local_upid_size[0] == remote_upid_size[0]) {
                 *is_low_group = memcmp(local_upids, remote_upids, local_upid_size[0]);
-            }
-            else {
+            } else {
                 *is_low_group = local_upid_size[0] < remote_upid_size[0];
             }
             (*is_low_group) |= MPIDI_DYNPROC_MASK;

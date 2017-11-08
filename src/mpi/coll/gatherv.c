@@ -38,7 +38,7 @@ cvars:
 int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf,
                 const int *recvcounts, const int *displs, MPI_Datatype recvtype, int root,
                 MPI_Comm comm)
-                __attribute__((weak,alias("PMPI_Gatherv")));
+    __attribute__ ((weak, alias("PMPI_Gatherv")));
 #endif
 /* -- End Profiling Symbol Block */
 
@@ -49,7 +49,7 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void 
 #define MPI_Gatherv PMPI_Gatherv
 
 /* This is the default implementation of gatherv. The algorithm is:
-   
+
    Algorithm: MPI_Gatherv
 
    Since the array of recvcounts is valid only on the root, we cannot
@@ -60,7 +60,7 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void 
 
    Cost = (p-1).alpha + n.((p-1)/p).beta
 
-   Possible improvements: 
+   Possible improvements:
 
    End Algorithm: MPI_Gatherv
 */
@@ -73,30 +73,26 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void 
 #define FUNCNAME MPIR_Gatherv
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Gatherv ( 
-	const void *sendbuf,
-	int sendcount,
-	MPI_Datatype sendtype,
-	void *recvbuf,
-	const int *recvcounts,
-	const int *displs,
-	MPI_Datatype recvtype,
-	int root,
-	MPIR_Comm *comm_ptr,
-        MPIR_Errflag_t *errflag )
+int MPIR_Gatherv(const void *sendbuf,
+                 int sendcount,
+                 MPI_Datatype sendtype,
+                 void *recvbuf,
+                 const int *recvcounts,
+                 const int *displs,
+                 MPI_Datatype recvtype, int root, MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag)
 {
-    int        comm_size, rank;
-    int        mpi_errno = MPI_SUCCESS;
+    int comm_size, rank;
+    int mpi_errno = MPI_SUCCESS;
     int mpi_errno_ret = MPI_SUCCESS;
-    MPI_Aint       extent;
-    int            i, reqs;
+    MPI_Aint extent;
+    int i, reqs;
     int min_procs;
     MPIR_Request **reqarray;
     MPI_Status *starray;
     MPIR_CHKLMEM_DECL(2);
 
     rank = comm_ptr->rank;
-    
+
     /* If rank == root, then I recv lots, otherwise I send */
     if (((comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) && (root == rank)) ||
         ((comm_ptr->comm_kind == MPIR_COMM_KIND__INTERCOMM) && (root == MPI_ROOT))) {
@@ -106,12 +102,14 @@ int MPIR_Gatherv (
             comm_size = comm_ptr->remote_size;
 
         MPIR_Datatype_get_extent_macro(recvtype, extent);
-	/* each node can make sure it is not going to overflow aint */
+        /* each node can make sure it is not going to overflow aint */
         MPIR_Ensure_Aint_fits_in_pointer(MPIR_VOID_PTR_CAST_TO_MPI_AINT recvbuf +
-					 displs[rank] * extent);
+                                         displs[rank] * extent);
 
-        MPIR_CHKLMEM_MALLOC(reqarray, MPIR_Request **, comm_size * sizeof(MPIR_Request *), mpi_errno, "reqarray", MPL_MEM_BUFFER);
-        MPIR_CHKLMEM_MALLOC(starray, MPI_Status *, comm_size * sizeof(MPI_Status), mpi_errno, "starray", MPL_MEM_BUFFER);
+        MPIR_CHKLMEM_MALLOC(reqarray, MPIR_Request **, comm_size * sizeof(MPIR_Request *),
+                            mpi_errno, "reqarray", MPL_MEM_BUFFER);
+        MPIR_CHKLMEM_MALLOC(starray, MPI_Status *, comm_size * sizeof(MPI_Status), mpi_errno,
+                            "starray", MPL_MEM_BUFFER);
 
         reqs = 0;
         for (i = 0; i < comm_size; i++) {
@@ -119,24 +117,25 @@ int MPIR_Gatherv (
                 if ((comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) && (i == rank)) {
                     if (sendbuf != MPI_IN_PLACE) {
                         mpi_errno = MPIR_Localcopy(sendbuf, sendcount, sendtype,
-                                                   ((char *)recvbuf+displs[rank]*extent), 
+                                                   ((char *) recvbuf + displs[rank] * extent),
                                                    recvcounts[rank], recvtype);
-                        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+                        if (mpi_errno)
+                            MPIR_ERR_POP(mpi_errno);
                     }
-                }
-                else {
-                    mpi_errno = MPIC_Irecv(((char *)recvbuf+displs[i]*extent),
-                                              recvcounts[i], recvtype, i,
-                                              MPIR_GATHERV_TAG, comm_ptr,
-                                              &reqarray[reqs++]);
-                    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+                } else {
+                    mpi_errno = MPIC_Irecv(((char *) recvbuf + displs[i] * extent),
+                                           recvcounts[i], recvtype, i,
+                                           MPIR_GATHERV_TAG, comm_ptr, &reqarray[reqs++]);
+                    if (mpi_errno)
+                        MPIR_ERR_POP(mpi_errno);
                 }
             }
         }
         /* ... then wait for *all* of them to finish: */
         mpi_errno = MPIC_Waitall(reqs, reqarray, starray, errflag);
-        if (mpi_errno&& mpi_errno != MPI_ERR_IN_STATUS) MPIR_ERR_POP(mpi_errno);
-        
+        if (mpi_errno && mpi_errno != MPI_ERR_IN_STATUS)
+            MPIR_ERR_POP(mpi_errno);
+
         /* --BEGIN ERROR HANDLING-- */
         if (mpi_errno == MPI_ERR_IN_STATUS) {
             for (i = 0; i < reqs; i++) {
@@ -154,32 +153,31 @@ int MPIR_Gatherv (
         /* --END ERROR HANDLING-- */
     }
 
-    else if (root != MPI_PROC_NULL) { /* non-root nodes, and in the intercomm. case, non-root nodes on remote side */
+    else if (root != MPI_PROC_NULL) {   /* non-root nodes, and in the intercomm. case, non-root nodes on remote side */
         if (sendcount) {
             /* we want local size in both the intracomm and intercomm cases
-               because the size of the root's group (group A in the standard) is
-               irrelevant here. */
+             * because the size of the root's group (group A in the standard) is
+             * irrelevant here. */
             comm_size = comm_ptr->local_size;
 
             min_procs = MPIR_CVAR_GATHERV_INTER_SSEND_MIN_PROCS;
             if (min_procs == -1)
-                min_procs = comm_size + 1; /* Disable ssend */
-            else if (min_procs == 0) /* backwards compatibility, use default value */
-                MPIR_CVAR_GET_DEFAULT_INT(MPIR_CVAR_GATHERV_INTER_SSEND_MIN_PROCS,&min_procs);
+                min_procs = comm_size + 1;      /* Disable ssend */
+            else if (min_procs == 0)    /* backwards compatibility, use default value */
+                MPIR_CVAR_GET_DEFAULT_INT(MPIR_CVAR_GATHERV_INTER_SSEND_MIN_PROCS, &min_procs);
 
             if (comm_size >= min_procs) {
                 mpi_errno = MPIC_Ssend(sendbuf, sendcount, sendtype, root,
-                                          MPIR_GATHERV_TAG, comm_ptr, errflag);
+                                       MPIR_GATHERV_TAG, comm_ptr, errflag);
                 if (mpi_errno) {
                     /* for communication errors, just record the error but continue */
                     *errflag = MPIR_ERR_GET_CLASS(mpi_errno);
                     MPIR_ERR_SET(mpi_errno, *errflag, "**fail");
                     MPIR_ERR_ADD(mpi_errno_ret, mpi_errno);
                 }
-            }
-            else {
+            } else {
                 mpi_errno = MPIC_Send(sendbuf, sendcount, sendtype, root,
-                                         MPIR_GATHERV_TAG, comm_ptr, errflag);
+                                      MPIR_GATHERV_TAG, comm_ptr, errflag);
                 if (mpi_errno) {
                     /* for communication errors, just record the error but continue */
                     *errflag = MPIR_ERR_GET_CLASS(mpi_errno);
@@ -189,16 +187,16 @@ int MPIR_Gatherv (
             }
         }
     }
-    
 
-fn_exit:
+
+  fn_exit:
     MPIR_CHKLMEM_FREEALL();
     if (mpi_errno_ret)
         mpi_errno = mpi_errno_ret;
     else if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
     return mpi_errno;
-fn_fail:
+  fn_fail:
     goto fn_exit;
 }
 
@@ -211,28 +209,30 @@ fn_fail:
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
 int MPIR_Gatherv_impl(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
-                      void *recvbuf, const int *recvcounts, const int *displs, MPI_Datatype recvtype,
-                      int root, MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
+                      void *recvbuf, const int *recvcounts, const int *displs,
+                      MPI_Datatype recvtype, int root, MPIR_Comm * comm_ptr,
+                      MPIR_Errflag_t * errflag)
 {
     int mpi_errno = MPI_SUCCESS;
-        
+
     if (comm_ptr->coll_fns != NULL && comm_ptr->coll_fns->Gatherv != NULL) {
-	/* --BEGIN USEREXTENSION-- */
-	mpi_errno = comm_ptr->coll_fns->Gatherv(sendbuf, sendcount, sendtype,
+        /* --BEGIN USEREXTENSION-- */
+        mpi_errno = comm_ptr->coll_fns->Gatherv(sendbuf, sendcount, sendtype,
                                                 recvbuf, recvcounts, displs, recvtype,
                                                 root, comm_ptr, errflag);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
-	/* --END USEREXTENSION-- */
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
+        /* --END USEREXTENSION-- */
     } else {
         mpi_errno = MPIR_Gatherv(sendbuf, sendcount, sendtype,
-                                 recvbuf, recvcounts, displs, recvtype,
-                                 root, comm_ptr, errflag);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+                                 recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     }
 
- fn_exit:
+  fn_exit:
     return mpi_errno;
- fn_fail:
+  fn_fail:
     goto fn_exit;
 }
 
@@ -248,23 +248,23 @@ int MPIR_Gatherv_impl(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 MPI_Gatherv - Gathers into specified locations from all processes in a group
 
 Input Parameters:
-+ sendbuf - starting address of send buffer (choice) 
-. sendcount - number of elements in send buffer (integer) 
-. sendtype - data type of send buffer elements (handle) 
-. recvcounts - integer array (of length group size) 
++ sendbuf - starting address of send buffer (choice)
+. sendcount - number of elements in send buffer (integer)
+. sendtype - data type of send buffer elements (handle)
+. recvcounts - integer array (of length group size)
 containing the number of elements that are received from each process
-(significant only at 'root') 
-. displs - integer array (of length group size). Entry 
+(significant only at 'root')
+. displs - integer array (of length group size). Entry
  'i'  specifies the displacement relative to recvbuf  at
 which to place the incoming data from process  'i'  (significant only
-at root) 
-. recvtype - data type of recv buffer elements 
-(significant only at 'root') (handle) 
-. root - rank of receiving process (integer) 
-- comm - communicator (handle) 
+at root)
+. recvtype - data type of recv buffer elements
+(significant only at 'root') (handle)
+. root - rank of receiving process (integer)
+- comm - communicator (handle)
 
 Output Parameters:
-. recvbuf - address of receive buffer (choice, significant only at 'root') 
+. recvbuf - address of receive buffer (choice, significant only at 'root')
 
 .N ThreadSafe
 
@@ -286,137 +286,147 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
     MPIR_FUNC_TERSE_STATE_DECL(MPID_STATE_MPI_GATHERV);
 
     MPIR_ERRTEST_INITIALIZED_ORDIE();
-    
+
     MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     MPIR_FUNC_TERSE_COLL_ENTER(MPID_STATE_MPI_GATHERV);
 
     /* Validate parameters, especially handles needing to be converted */
-#   ifdef HAVE_ERROR_CHECKING
+#ifdef HAVE_ERROR_CHECKING
     {
         MPID_BEGIN_ERROR_CHECKS;
         {
-	    MPIR_ERRTEST_COMM(comm, mpi_errno);
-	}
+            MPIR_ERRTEST_COMM(comm, mpi_errno);
+        }
         MPID_END_ERROR_CHECKS;
     }
-#   endif /* HAVE_ERROR_CHECKING */
+#endif /* HAVE_ERROR_CHECKING */
 
     /* Convert MPI object handles to object pointers */
-    MPIR_Comm_get_ptr( comm, comm_ptr );
+    MPIR_Comm_get_ptr(comm, comm_ptr);
 
     /* Validate parameters and objects (post conversion) */
-#   ifdef HAVE_ERROR_CHECKING
+#ifdef HAVE_ERROR_CHECKING
     {
         MPID_BEGIN_ERROR_CHECKS;
         {
-	    MPIR_Datatype *sendtype_ptr=NULL, *recvtype_ptr=NULL;
+            MPIR_Datatype *sendtype_ptr = NULL, *recvtype_ptr = NULL;
             int i, rank, comm_size;
-	    
-            MPIR_Comm_valid_ptr( comm_ptr, mpi_errno, FALSE );
-            if (mpi_errno != MPI_SUCCESS) goto fn_fail;
 
-	    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
-		MPIR_ERRTEST_INTRA_ROOT(comm_ptr, root, mpi_errno);
+            MPIR_Comm_valid_ptr(comm_ptr, mpi_errno, FALSE);
+            if (mpi_errno != MPI_SUCCESS)
+                goto fn_fail;
+
+            if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+                MPIR_ERRTEST_INTRA_ROOT(comm_ptr, root, mpi_errno);
 
                 if (sendbuf != MPI_IN_PLACE) {
                     MPIR_ERRTEST_COUNT(sendcount, mpi_errno);
                     MPIR_ERRTEST_DATATYPE(sendtype, "sendtype", mpi_errno);
                     if (HANDLE_GET_KIND(sendtype) != HANDLE_KIND_BUILTIN) {
                         MPIR_Datatype_get_ptr(sendtype, sendtype_ptr);
-                        MPIR_Datatype_valid_ptr( sendtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
-                        MPIR_Datatype_committed_ptr( sendtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                        MPIR_Datatype_valid_ptr(sendtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
+                        MPIR_Datatype_committed_ptr(sendtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
                     }
-                    MPIR_ERRTEST_USERBUFFER(sendbuf,sendcount,sendtype,mpi_errno);
+                    MPIR_ERRTEST_USERBUFFER(sendbuf, sendcount, sendtype, mpi_errno);
                 }
 
                 rank = comm_ptr->rank;
                 if (rank == root) {
                     comm_size = comm_ptr->local_size;
-                    for (i=0; i<comm_size; i++) {
+                    for (i = 0; i < comm_size; i++) {
                         MPIR_ERRTEST_COUNT(recvcounts[i], mpi_errno);
                         MPIR_ERRTEST_DATATYPE(recvtype, "recvtype", mpi_errno);
                     }
                     if (HANDLE_GET_KIND(recvtype) != HANDLE_KIND_BUILTIN) {
                         MPIR_Datatype_get_ptr(recvtype, recvtype_ptr);
-                        MPIR_Datatype_valid_ptr( recvtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
-                        MPIR_Datatype_committed_ptr( recvtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                        MPIR_Datatype_valid_ptr(recvtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
+                        MPIR_Datatype_committed_ptr(recvtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
                     }
 
-                    for (i=0; i<comm_size; i++) {
+                    for (i = 0; i < comm_size; i++) {
                         if (recvcounts[i] > 0) {
                             MPIR_ERRTEST_RECVBUF_INPLACE(recvbuf, recvcounts[i], mpi_errno);
-                            MPIR_ERRTEST_USERBUFFER(recvbuf,recvcounts[i],recvtype,mpi_errno);
+                            MPIR_ERRTEST_USERBUFFER(recvbuf, recvcounts[i], recvtype, mpi_errno);
                             break;
                         }
                     }
 
                     /* catch common aliasing cases */
-                    if (sendbuf != MPI_IN_PLACE && sendtype == recvtype && recvcounts[comm_ptr->rank] != 0 && sendcount != 0) {
+                    if (sendbuf != MPI_IN_PLACE && sendtype == recvtype &&
+                        recvcounts[comm_ptr->rank] != 0 && sendcount != 0) {
                         int recvtype_size;
                         MPIR_Datatype_get_size_macro(recvtype, recvtype_size);
-                        MPIR_ERRTEST_ALIAS_COLL(sendbuf, (char*)recvbuf + displs[comm_ptr->rank]*recvtype_size, mpi_errno);
+                        MPIR_ERRTEST_ALIAS_COLL(sendbuf,
+                                                (char *) recvbuf +
+                                                displs[comm_ptr->rank] * recvtype_size, mpi_errno);
                     }
-                }
-                else
+                } else
                     MPIR_ERRTEST_SENDBUF_INPLACE(sendbuf, sendcount, mpi_errno);
             }
 
-	    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTERCOMM) {
-		MPIR_ERRTEST_INTER_ROOT(comm_ptr, root, mpi_errno);
+            if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTERCOMM) {
+                MPIR_ERRTEST_INTER_ROOT(comm_ptr, root, mpi_errno);
 
                 if (root == MPI_ROOT) {
                     comm_size = comm_ptr->remote_size;
-                    for (i=0; i<comm_size; i++) {
+                    for (i = 0; i < comm_size; i++) {
                         MPIR_ERRTEST_COUNT(recvcounts[i], mpi_errno);
                         MPIR_ERRTEST_DATATYPE(recvtype, "recvtype", mpi_errno);
                     }
                     if (HANDLE_GET_KIND(recvtype) != HANDLE_KIND_BUILTIN) {
                         MPIR_Datatype_get_ptr(recvtype, recvtype_ptr);
-                        MPIR_Datatype_valid_ptr( recvtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
-                        MPIR_Datatype_committed_ptr( recvtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                        MPIR_Datatype_valid_ptr(recvtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
+                        MPIR_Datatype_committed_ptr(recvtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
                     }
-                    for (i=0; i<comm_size; i++) {
+                    for (i = 0; i < comm_size; i++) {
                         if (recvcounts[i] > 0) {
                             MPIR_ERRTEST_RECVBUF_INPLACE(recvbuf, recvcounts[i], mpi_errno);
-                            MPIR_ERRTEST_USERBUFFER(recvbuf,recvcounts[i],recvtype,mpi_errno);
+                            MPIR_ERRTEST_USERBUFFER(recvbuf, recvcounts[i], recvtype, mpi_errno);
                             break;
                         }
                     }
-                }
-                else if (root != MPI_PROC_NULL) {
+                } else if (root != MPI_PROC_NULL) {
                     MPIR_ERRTEST_COUNT(sendcount, mpi_errno);
                     MPIR_ERRTEST_DATATYPE(sendtype, "sendtype", mpi_errno);
                     if (HANDLE_GET_KIND(sendtype) != HANDLE_KIND_BUILTIN) {
                         MPIR_Datatype_get_ptr(sendtype, sendtype_ptr);
-                        MPIR_Datatype_valid_ptr( sendtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
-                        MPIR_Datatype_committed_ptr( sendtype_ptr, mpi_errno );
-                        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                        MPIR_Datatype_valid_ptr(sendtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
+                        MPIR_Datatype_committed_ptr(sendtype_ptr, mpi_errno);
+                        if (mpi_errno != MPI_SUCCESS)
+                            goto fn_fail;
                     }
                     MPIR_ERRTEST_SENDBUF_INPLACE(sendbuf, sendcount, mpi_errno);
-                    MPIR_ERRTEST_USERBUFFER(sendbuf,sendcount,sendtype,mpi_errno);
+                    MPIR_ERRTEST_USERBUFFER(sendbuf, sendcount, sendtype, mpi_errno);
                 }
-	    }
+            }
         }
         MPID_END_ERROR_CHECKS;
     }
-#   endif /* HAVE_ERROR_CHECKING */
+#endif /* HAVE_ERROR_CHECKING */
 
     /* ... body of routine ...  */
 
     mpi_errno = MPID_Gatherv(sendbuf, sendcount, sendtype,
-                                  recvbuf, recvcounts, displs, recvtype,
-                                  root, comm_ptr, &errflag);
-    if (mpi_errno) goto fn_fail;
+                             recvbuf, recvcounts, displs, recvtype, root, comm_ptr, &errflag);
+    if (mpi_errno)
+        goto fn_fail;
 
     /* ... end of body of routine ... */
-    
+
   fn_exit:
     MPIR_FUNC_TERSE_COLL_EXIT(MPID_STATE_MPI_GATHERV);
     MPID_THREAD_CS_EXIT(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
@@ -424,15 +434,16 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
   fn_fail:
     /* --BEGIN ERROR HANDLING-- */
-#   ifdef HAVE_ERROR_CHECKING
+#ifdef HAVE_ERROR_CHECKING
     {
-	mpi_errno = MPIR_Err_create_code(
-	    mpi_errno, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, MPI_ERR_OTHER, "**mpi_gatherv",
-	    "**mpi_gatherv %p %d %D %p %p %p %D %d %C", sendbuf, sendcount, sendtype,
-	    recvbuf, recvcounts, displs, recvtype, root, comm);
+        mpi_errno =
+            MPIR_Err_create_code(mpi_errno, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, MPI_ERR_OTHER,
+                                 "**mpi_gatherv", "**mpi_gatherv %p %d %D %p %p %p %D %d %C",
+                                 sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs,
+                                 recvtype, root, comm);
     }
-#   endif
-    mpi_errno = MPIR_Err_return_comm( comm_ptr, FCNAME, mpi_errno );
+#endif
+    mpi_errno = MPIR_Err_return_comm(comm_ptr, FCNAME, mpi_errno);
     goto fn_exit;
     /* --END ERROR HANDLING-- */
 }

@@ -169,7 +169,8 @@ MPL_STATIC_INLINE_PREFIX MPIDI_CH4U_win_target_t *MPIDI_CH4U_win_target_add(MPIR
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4U_WIN_TARGET_ADD);
 
     MPIDI_CH4U_win_target_t *target_ptr = NULL;
-    target_ptr = (MPIDI_CH4U_win_target_t *) MPL_malloc(sizeof(MPIDI_CH4U_win_target_t), MPL_MEM_RMA);
+    target_ptr =
+        (MPIDI_CH4U_win_target_t *) MPL_malloc(sizeof(MPIDI_CH4U_win_target_t), MPL_MEM_RMA);
     target_ptr->rank = rank;
     MPIR_cc_set(&target_ptr->local_cmpl_cnts, 0);
     MPIR_cc_set(&target_ptr->remote_cmpl_cnts, 0);
@@ -459,8 +460,7 @@ static inline uint64_t MPIDI_CH4U_init_recvtag(uint64_t * mask_bits,
     if (MPI_ANY_SOURCE == source) {
         match_bits = (match_bits << MPIDI_CH4U_TAG_SHIFT);
         *mask_bits |= MPIDI_CH4U_SOURCE_MASK;
-    }
-    else {
+    } else {
         match_bits |= source;
         match_bits = (match_bits << MPIDI_CH4U_TAG_SHIFT);
     }
@@ -869,7 +869,8 @@ MPL_STATIC_INLINE_PREFIX void MPIDI_CH4U_map_destroy(void *in_map)
 #define FUNCNAME MPIDI_CH4U_map_set
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-MPL_STATIC_INLINE_PREFIX void MPIDI_CH4U_map_set(void *in_map, uint64_t id, void *val, MPL_memory_class class)
+MPL_STATIC_INLINE_PREFIX void MPIDI_CH4U_map_set(void *in_map, uint64_t id, void *val,
+                                                 MPL_memory_class class)
 {
     MPIDI_CH4U_map_t *map;
     MPIDI_CH4U_map_entry_t *map_entry;

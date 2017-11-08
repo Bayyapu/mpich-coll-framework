@@ -20,23 +20,23 @@ char *MPL_strdup(const char *str);
 #endif /* defined(MPL_USE_MEMORY_TRACING) || defined(MPL_HAVE_STRDUP) */
 
 typedef enum {
-    MPL_MEM_ADDRESS,        /* Address information */
-    MPL_MEM_OBJECT,         /* General MPI Objects */
-    MPL_MEM_COMM,           /* Communicators */
-    MPL_MEM_GROUP,          /* Groups */
-    MPL_MEM_STRINGS,        /* String buffers */
-    MPL_MEM_RMA,            /* RMA data transfers, windows, etc. */
-    MPL_MEM_BUFFER,         /* Internal buffers for data transfers */
-    MPL_MEM_SHM,            /* Shared memory windows, buffers, etc. */
-    MPL_MEM_THREAD,         /* Threading information, locks, etc. */
-    MPL_MEM_DYNAMIC,        /* Dynamic process related information */
-    MPL_MEM_IO,             /* MPI I/O related objects */
-    MPL_MEM_GREQ,           /* Generalized requests */
-    MPL_MEM_DATATYPE,       /* MPI datatypes and related structures */
-    MPL_MEM_MPIT,           /* MPI_T structures */
-    MPL_MEM_DEBUG,          /* Data for the debugging information */
-    MPL_MEM_PM,             /* Data for process managers */
-    MPL_MEM_OTHER,          /* Other small memory allocations */
+    MPL_MEM_ADDRESS,            /* Address information */
+    MPL_MEM_OBJECT,             /* General MPI Objects */
+    MPL_MEM_COMM,               /* Communicators */
+    MPL_MEM_GROUP,              /* Groups */
+    MPL_MEM_STRINGS,            /* String buffers */
+    MPL_MEM_RMA,                /* RMA data transfers, windows, etc. */
+    MPL_MEM_BUFFER,             /* Internal buffers for data transfers */
+    MPL_MEM_SHM,                /* Shared memory windows, buffers, etc. */
+    MPL_MEM_THREAD,             /* Threading information, locks, etc. */
+    MPL_MEM_DYNAMIC,            /* Dynamic process related information */
+    MPL_MEM_IO,                 /* MPI I/O related objects */
+    MPL_MEM_GREQ,               /* Generalized requests */
+    MPL_MEM_DATATYPE,           /* MPI datatypes and related structures */
+    MPL_MEM_MPIT,               /* MPI_T structures */
+    MPL_MEM_DEBUG,              /* Data for the debugging information */
+    MPL_MEM_PM,                 /* Data for process managers */
+    MPL_MEM_OTHER,              /* Other small memory allocations */
     MPL_MAX_MEMORY_CLASS
 } MPL_memory_class;
 
@@ -54,7 +54,7 @@ typedef struct {
 
   Synopsis:
 .vb
-  void *MPL_malloc( size_t len, MPL_memory_allocation_t type )
+  void *MPL_malloc(size_t len, MPL_memory_allocation_t type)
 .ve
 
   Input Parameter:
@@ -86,7 +86,7 @@ typedef struct {
 
   Synopsis:
 .vb
-    void *MPL_calloc( size_t nelm, size_t elsize )
+    void *MPL_calloc(size_t nelm, size_t elsize)
 .ve
 
   Input Parameters:
@@ -108,7 +108,7 @@ typedef struct {
 
   Synopsis:
 .vb
-   void MPL_free( void *ptr )
+   void MPL_free(void *ptr)
 .ve
 
   Input Parameter:
@@ -139,7 +139,7 @@ typedef struct {
 
   Synopsis:
 .vb
-  void *MPL_mmap( void *addr, size_t length, int prot, int flags, int fd, off_t offset )
+  void *MPL_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 .ve
 
   Input Parameters:
@@ -175,7 +175,7 @@ typedef struct {
 
   Synopsis:
 .vb
-  void *MPL_munmap( void *addr, size_t length )
+  void *MPL_munmap(void *addr, size_t length)
 .ve
 
   Input Parameters:
@@ -216,7 +216,7 @@ typedef struct {
  * The MPL_mem_alignment_t union is used to help internal structures or buffers
  * follow the alignment rules for all predefined datatypes. */
 
-#if 0 /* sample usage : wrap up sample_t structure. */
+#if 0   /* sample usage : wrap up sample_t structure. */
 typedef union {
     sample_t var;
     MPL_mem_alignment_t alignment;
@@ -286,7 +286,7 @@ void MPL_trconfig(int, int);
 void *MPL_trmalloc(size_t, MPL_memory_class, int, const char[]);
 void MPL_trfree(void *, int, const char[]);
 int MPL_trvalid(const char[]);
-int MPL_trvalid2(const char[],int,const char[]);
+int MPL_trvalid2(const char[], int, const char[]);
 void *MPL_trcalloc(size_t, size_t, MPL_memory_class, int, const char[]);
 #include <sys/types.h>
 void *MPL_trmmap(void *, size_t, int, int, int, off_t, MPL_memory_class, int, const char[]);
@@ -297,6 +297,6 @@ void *MPL_trstrdup(const char *, int, const char[]);
 /* Make sure that FILE is defined */
 #include <stdio.h>
 void MPL_trdump(FILE *, int);
-void MPL_trcategorydump(FILE *fp);
+void MPL_trcategorydump(FILE * fp);
 
 #endif /* !defined(MPL_TRMEM_H_INCLUDED) */

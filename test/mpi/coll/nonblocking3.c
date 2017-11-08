@@ -164,8 +164,7 @@ static void start_random_nonblocking(MPI_Comm comm, unsigned int rndnum, MPI_Req
         for (i = 0; i < COUNT; ++i) {
             if (rank == 0) {
                 buf[i] = i;
-            }
-            else {
+            } else {
                 buf[i] = 0xdeadbeef;
             }
         }
@@ -495,8 +494,7 @@ static void check_after_completion(struct laundry *l)
                     my_assert(recvbuf[i * COUNT + j] == i + j);
                 }
             }
-        }
-        else {
+        } else {
             for (i = 0; i < size * COUNT; ++i) {
                 my_assert(recvbuf[i] == 0xdeadbeef);
             }
@@ -510,8 +508,7 @@ static void check_after_completion(struct laundry *l)
                     my_assert(recvbuf[i * COUNT + j] == i + j);
                 }
             }
-        }
-        else {
+        } else {
             for (i = 0; i < size * COUNT; ++i) {
                 my_assert(recvbuf[i] == 0xdeadbeef);
             }
@@ -579,8 +576,7 @@ static void check_after_completion(struct laundry *l)
                     my_assert(recvbuf[i * COUNT + j] == i + j);
                 }
             }
-        }
-        else {
+        } else {
             for (i = 0; i < size * COUNT; ++i) {
                 my_assert(recvbuf[i] == 0xdeadbeef);
             }
@@ -643,8 +639,7 @@ static void check_after_completion(struct laundry *l)
                 /* only odd procs did a recv */
                 if (rank % 2 == 0) {
                     my_assert(recvbuf[j] == 0xdeadbeef);
-                }
-                else {
+                } else {
                     if (recvbuf[j] != j)
                         printf("recvbuf[%d]=%d j=%d\n", j, recvbuf[j], j);
                     my_assert(recvbuf[j] == j);
@@ -695,8 +690,7 @@ static void complete_something_somehow(unsigned int rndnum, int numreqs, MPI_Req
         MPI_Waitany(numreqs, reqs, &idx, MPI_STATUS_IGNORE);
         if (idx == MPI_UNDEFINED) {
             *outcount = 0;
-        }
-        else {
+        } else {
             *outcount = 1;
             indices[0] = idx;
         }
@@ -706,8 +700,7 @@ static void complete_something_somehow(unsigned int rndnum, int numreqs, MPI_Req
         MPI_Testany(numreqs, reqs, &idx, &flag, MPI_STATUS_IGNORE);
         if (idx == MPI_UNDEFINED) {
             *outcount = 0;
-        }
-        else {
+        } else {
             *outcount = 1;
             indices[0] = idx;
         }
@@ -720,8 +713,7 @@ static void complete_something_somehow(unsigned int rndnum, int numreqs, MPI_Req
             for (i = 0; i < numreqs; ++i) {
                 indices[i] = i;
             }
-        }
-        else {
+        } else {
             *outcount = 0;
         }
         break;

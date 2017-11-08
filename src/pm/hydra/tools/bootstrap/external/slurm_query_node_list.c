@@ -154,8 +154,7 @@ static HYD_status extract_tasks_per_node(int nnodes, char *task_list)
             nodes[strlen(nodes) - 1] = 0;
             nodes++;
             j = atoi(nodes);
-        }
-        else
+        } else
             j = 1;
 
         for (k = 0; k < j; k++)

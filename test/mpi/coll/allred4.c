@@ -88,8 +88,7 @@ static void initMat(int rank, int size, int nmat, int mat[])
     if (size == 2) {
         /* rank 0 is A, 1 is B */
         kind = 1 + rank;
-    }
-    else {
+    } else {
         int tmpA, tmpB;
         /* Most ranks are identity matrices */
         kind = 0;

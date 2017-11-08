@@ -107,8 +107,7 @@ static int verify_comm(MPI_Comm comm)
     for (use_dup = 0; use_dup <= 1; ++use_dup) {
         if (!use_dup) {
             MPI_Dist_graph_neighbors_count(comm, &indegree, &outdegree, &weighted);
-        }
-        else {
+        } else {
             MPI_Comm_dup(comm, &dupcomm);
             comm = dupcomm;     /* caller retains original comm value */
         }
@@ -161,8 +160,7 @@ static int verify_comm(MPI_Comm comm)
                 if (j == indegree) {
                     fprintf(stderr, "no edge from %d to %d specified\n", i, rank);
                     ++local_errs;
-                }
-                else {
+                } else {
                     if (sweights[j] != layout[i][rank]) {
                         fprintf(stderr, "incorrect weight for edge (%d,%d): %d instead of %d\n",
                                 i, rank, sweights[j], layout[i][rank]);
@@ -180,8 +178,7 @@ static int verify_comm(MPI_Comm comm)
                 if (j == outdegree) {
                     fprintf(stderr, "no edge from %d to %d specified\n", rank, i);
                     ++local_errs;
-                }
-                else {
+                } else {
                     if (dweights[j] != layout[rank][i]) {
                         fprintf(stderr, "incorrect weight for edge (%d,%d): %d instead of %d\n",
                                 rank, i, dweights[j], layout[rank][i]);
@@ -390,8 +387,7 @@ int main(int argc, char *argv[])
             if (rank == 0) {
                 MPI_Dist_graph_create(MPI_COMM_WORLD, p, sources, degrees,
                                       destinations, sweights, MPI_INFO_NULL, reorder, &comm);
-            }
-            else {
+            } else {
                 MPI_Dist_graph_create(MPI_COMM_WORLD, 0, NULL, NULL,
                                       NULL, NULL, MPI_INFO_NULL, reorder, &comm);
             }

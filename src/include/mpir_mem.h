@@ -11,7 +11,7 @@
 /* Make sure that we have the definitions for the malloc routines and size_t */
 #include <stdio.h>
 #include <stdlib.h>
-/* strdup is often declared in string.h, so if we plan to redefine strdup, 
+/* strdup is often declared in string.h, so if we plan to redefine strdup,
    we need to include string first.  That is done below, only in the
    case where we redefine strdup */
 
@@ -27,8 +27,8 @@ extern "C" {
 #endif
 
 #if defined (MPL_USE_DBG_LOGGING)
-extern MPL_dbg_class MPIR_DBG_STRING;
-#endif /* MPL_USE_DBG_LOGGING */
+    extern MPL_dbg_class MPIR_DBG_STRING;
+#endif                          /* MPL_USE_DBG_LOGGING */
 
 /* ------------------------------------------------------------------------- */
 /* mpir_mem.h */
@@ -42,7 +42,7 @@ extern MPL_dbg_class MPIR_DBG_STRING;
 /* style: allow:alloca:1 sig:0 */
 /* style: define:__strdup:1 sig:0 */
 /* style: define:strdup:1 sig:0 */
-/* style: allow:fprintf:5 sig:0 */   /* For handle debugging ONLY */
+    /* style: allow:fprintf:5 sig:0 *//* For handle debugging ONLY */
 /* style: allow:snprintf:1 sig:0 */
 
 /*D
@@ -50,20 +50,20 @@ extern MPL_dbg_class MPIR_DBG_STRING;
 
   Rules for memory management:
 
-  MPICH explicity prohibits the appearence of 'malloc', 'free', 
-  'calloc', 'realloc', or 'strdup' in any code implementing a device or 
-  MPI call (of course, users may use any of these calls in their code).  
+  MPICH explicity prohibits the appearence of 'malloc', 'free',
+  'calloc', 'realloc', or 'strdup' in any code implementing a device or
+  MPI call (of course, users may use any of these calls in their code).
   Instead, you must use 'MPL_malloc' etc.; if these are defined
   as 'malloc', that is allowed, but an explicit use of 'malloc' instead of
   'MPL_malloc' in the source code is not allowed.  This restriction is
-  made to simplify the use of portable tools to test for memory leaks, 
+  made to simplify the use of portable tools to test for memory leaks,
   overwrites, and other consistency checks.
 
-  Most memory should be allocated at the time that 'MPID_Init' is 
+  Most memory should be allocated at the time that 'MPID_Init' is
   called and released with 'MPID_Finalize' is called.  If at all possible,
   no other routine should fail because memory could not be allocated
   (for example, because the user has allocated large arrays after 'MPI_Init').
-  
+
   The implementation of the MPI routines will strive to avoid memory allocation
   as well; however, operations such as 'MPI_Type_index' that create a new
   data type that reflects data that must be copied from an array of arbitrary
@@ -101,12 +101,12 @@ extern MPL_dbg_class MPIR_DBG_STRING;
 #if defined(strdup) || defined(__strdup)
 #undef strdup
 #endif
-    /* The ::: should cause the compiler to choke; the string 
-       will give the explanation */
-#undef strdup /* in case strdup is a macro */
+    /* The ::: should cause the compiler to choke; the string
+     * will give the explanation */
+#undef strdup                   /* in case strdup is a macro */
 #define strdup(a)         'Error use MPL_strdup' :::
 
-#endif /* USE_MEMORY_TRACING */
+#endif                          /* USE_MEMORY_TRACING */
 
 
 /* Memory allocation macros. See document. */
@@ -115,9 +115,9 @@ extern MPL_dbg_class MPIR_DBG_STRING;
  * recoverable by default, but this can be changed. */
 #ifdef HAVE_ERROR_CHECKING
 #define MPIR_CHKMEM_SETERR(rc_,nbytes_,name_) \
-     rc_=MPIR_Err_create_code( MPI_SUCCESS, \
+     rc_=MPIR_Err_create_code(MPI_SUCCESS, \
           MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, \
-          MPI_ERR_OTHER, "**nomem2", "**nomem2 %d %s", nbytes_, name_ )
+          MPI_ERR_OTHER, "**nomem2", "**nomem2 %d %s", nbytes_, name_)
 #else
 #define MPIR_CHKMEM_SETERR(rc_,nbytes_,name_) rc_=MPI_ERR_OTHER
 #endif
@@ -158,8 +158,8 @@ if (pointer_) { \
 }}
 #define MPIR_CHKLMEM_FREEALL() \
     do { while (mpiu_chklmem_stk_sp_ > 0) {\
-       MPL_free( mpiu_chklmem_stk_[--mpiu_chklmem_stk_sp_] ); } } while(0)
-#endif /* HAVE_ALLOCA */
+       MPL_free(mpiu_chklmem_stk_[--mpiu_chklmem_stk_sp_]); } } while (0)
+#endif                          /* HAVE_ALLOCA */
 #define MPIR_CHKLMEM_MALLOC(pointer_,type_,nbytes_,rc_,name_,class_) \
     MPIR_CHKLMEM_MALLOC_ORJUMP(pointer_,type_,nbytes_,rc_,name_,class_)
 #define MPIR_CHKLMEM_MALLOC_ORJUMP(pointer_,type_,nbytes_,rc_,name_,class_) \
@@ -184,7 +184,7 @@ if (pointer_) { \
     mpiu_chkpmem_stk_[mpiu_chkpmem_stk_sp_++] = pointer_;}
 #define MPIR_CHKPMEM_REAP() \
     { while (mpiu_chkpmem_stk_sp_ > 0) {\
-       MPL_free( mpiu_chkpmem_stk_[--mpiu_chkpmem_stk_sp_] ); } }
+       MPL_free(mpiu_chkpmem_stk_[--mpiu_chkpmem_stk_sp_]); } }
 #define MPIR_CHKPMEM_COMMIT() \
     mpiu_chkpmem_stk_sp_ = 0
 #define MPIR_CHKPMEM_MALLOC(pointer_,type_,nbytes_,rc_,name_,class_) \
@@ -229,19 +229,19 @@ if (pointer_) { \
 } while (0)
 
 #if defined(HAVE_STRNCASECMP)
-#   define MPIR_Strncasecmp strncasecmp
+#define MPIR_Strncasecmp strncasecmp
 #elif defined(HAVE_STRNICMP)
-#   define MPIR_Strncasecmp strnicmp
+#define MPIR_Strncasecmp strnicmp
 #else
 /* FIXME: Provide a fallback function ? */
-#   error "No function defined for case-insensitive strncmp"
+#error "No function defined for case-insensitive strncmp"
 #endif
 
 /* Evaluates to a boolean expression, true if the given byte ranges overlap,
  * false otherwise.  That is, true iff [a_,a_+a_len_) overlaps with [b_,b_+b_len_) */
 #define MPIR_MEM_RANGES_OVERLAP(a_,a_len_,b_,b_len_) \
-    ( ((char *)(a_) >= (char *)(b_) && ((char *)(a_) < ((char *)(b_) + (b_len_)))) ||  \
-      ((char *)(b_) >= (char *)(a_) && ((char *)(b_) < ((char *)(a_) + (a_len_)))) )
+    (((char *)(a_) >= (char *)(b_) && ((char *)(a_) < ((char *)(b_) + (b_len_)))) ||  \
+      ((char *)(b_) >= (char *)(a_) && ((char *)(b_) < ((char *)(a_) + (a_len_)))))
 #if (!defined(NDEBUG) && defined(HAVE_ERROR_CHECKING))
 
 /* May be used to perform sanity and range checking on memcpy and mempcy-like
@@ -259,7 +259,7 @@ if (pointer_) { \
         }                                                                                                       \
     } while (0)
 #else
-#define CHECK_MEMCPY(dst_,src_,len_) do {} while(0)
+#define CHECK_MEMCPY(dst_,src_,len_) do {} while (0)
 #endif
 
 /* valgrind macros are now provided by MPL (via mpl.h included in mpiimpl.h) */
@@ -271,5 +271,4 @@ if (pointer_) { \
 #if defined(__cplusplus)
 }
 #endif
-
-#endif  /* MPIR_MEM_H_INCLUDED */
+#endif                          /* MPIR_MEM_H_INCLUDED */

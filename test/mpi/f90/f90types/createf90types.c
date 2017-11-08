@@ -51,8 +51,7 @@ static int checkType(const char str[], int p, int r, int f90kind, int err, MPI_D
         if (combiner != f90kind) {
             errs++;
             printf("Wrong combiner type (got %d, should be %d) for %s\n", combiner, f90kind, str);
-        }
-        else {
+        } else {
             int parms[2];
             MPI_Datatype outtype;
             parms[0] = 0;

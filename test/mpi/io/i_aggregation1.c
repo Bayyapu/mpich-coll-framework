@@ -283,8 +283,7 @@ int main(int argc, char *argv[])
         if (!target) {
             Usage(__LINE__);
         }
-    }
-    else {
+    } else {
         target = "testfile";
         set_hints(&info);
     }
@@ -296,8 +295,7 @@ int main(int argc, char *argv[])
     if (rank == 0) {
         if (corrupt_blocks == 0) {
             fprintf(stdout, " No Errors\n");
-        }
-        else {
+        } else {
             fprintf(stdout, "%d/%d blocks corrupt\n", corrupt_blocks, nproc * NUM_OBJS);
         }
     }

@@ -92,8 +92,7 @@ int main(int argc, char **argv)
     /* print message and exit */
     if (errs) {
         fprintf(stderr, "Found %d errors\n", errs);
-    }
-    else {
+    } else {
         printf(" No Errors\n");
     }
     MPI_Finalize();
@@ -404,8 +403,7 @@ int indexed_contig_leading_zero_test(void)
         adisp[0] = (MPI_Aint) LLONG_MAX;
         adisp[1] = 2 * sizeof(int);
         adisp[2] = (MPI_Aint) LLONG_MAX;
-    }
-    else
+    } else
 #endif
     {
         adisp[0] = (MPI_Aint) INT_MAX;

@@ -12,7 +12,7 @@
 #include "../posix/shm_direct.h"
 
 MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_barrier(MPIR_Comm * comm, MPIR_Errflag_t * errflag,
-                                                   void * algo_parameters_ctr)
+                                                   void *algo_parameters_ctr)
 {
     int ret;
 
@@ -29,7 +29,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_barrier(MPIR_Comm * comm, MPIR_Errfla
 MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_bcast(void *buffer, int count, MPI_Datatype datatype,
                                                  int root, MPIR_Comm * comm,
                                                  MPIR_Errflag_t * errflag,
-                                                 void * algo_parameters_ctr)
+                                                 void *algo_parameters_ctr)
 {
     int ret;
 
@@ -47,7 +47,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_bcast(void *buffer, int count, MPI_Da
 MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_allreduce(const void *sendbuf, void *recvbuf,
                                                      int count, MPI_Datatype datatype, MPI_Op op,
                                                      MPIR_Comm * comm, MPIR_Errflag_t * errflag,
-                                                     void * algo_parameters_ctr)
+                                                     void *algo_parameters_ctr)
 {
     int ret;
 
@@ -56,7 +56,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_allreduce(const void *sendbuf, void *
 
     ret =
         MPIDI_POSIX_mpi_allreduce(sendbuf, recvbuf, count, datatype, op, comm, errflag,
-                                  (MPIDI_POSIX_coll_algo_container_t *)algo_parameters_ctr);
+                                  (MPIDI_POSIX_coll_algo_container_t *) algo_parameters_ctr);
 
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_ALLREDUCE);
     return ret;
@@ -225,7 +225,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_alltoallw(const void *sendbuf, const 
 MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_reduce(const void *sendbuf, void *recvbuf, int count,
                                                   MPI_Datatype datatype, MPI_Op op, int root,
                                                   MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag,
-                                                  void * algo_parameters_ctr)
+                                                  void *algo_parameters_ctr)
 {
     int ret;
 
@@ -234,7 +234,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_reduce(const void *sendbuf, void *rec
 
     ret =
         MPIDI_POSIX_mpi_reduce(sendbuf, recvbuf, count, datatype, op, root, comm_ptr, errflag,
-                               (MPIDI_POSIX_coll_algo_container_t *)algo_parameters_ctr);
+                               (MPIDI_POSIX_coll_algo_container_t *) algo_parameters_ctr);
 
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_REDUCE);
     return ret;
@@ -360,8 +360,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_neighbor_alltoallv(const void *sendbu
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_NEIGHBOR_ALLTOALLV);
 
     ret = MPIDI_POSIX_mpi_neighbor_alltoallv(sendbuf, sendcounts, sdispls, sendtype,
-                                             recvbuf, recvcounts, rdispls, recvtype,
-                                             comm);
+                                             recvbuf, recvcounts, rdispls, recvtype, comm);
 
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_NEIGHBOR_ALLTOALLV);
     return ret;
@@ -383,8 +382,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_neighbor_alltoallw(const void *sendbu
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_NEIGHBOR_ALLTOALLW);
 
     ret = MPIDI_POSIX_mpi_neighbor_alltoallw(sendbuf, sendcounts, sdispls, sendtypes,
-                                             recvbuf, recvcounts, rdispls, recvtypes,
-                                             comm);
+                                             recvbuf, recvcounts, rdispls, recvtypes, comm);
 
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_NEIGHBOR_ALLTOALLW);
     return ret;
@@ -480,8 +478,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_ineighbor_alltoallv(const void *sendb
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_INEIGHBOR_ALLTOALLV);
 
     ret = MPIDI_POSIX_mpi_ineighbor_alltoallv(sendbuf, sendcounts, sdispls, sendtype,
-                                              recvbuf, recvcounts, rdispls, recvtype,
-                                              comm, req);
+                                              recvbuf, recvcounts, rdispls, recvtype, comm, req);
 
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_INEIGHBOR_ALLTOALLV);
     return ret;
@@ -503,8 +500,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_SHM_mpi_ineighbor_alltoallw(const void *sendb
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_INEIGHBOR_ALLTOALLW);
 
     ret = MPIDI_POSIX_mpi_ineighbor_alltoallw(sendbuf, sendcounts, sdispls, sendtypes,
-                                              recvbuf, recvcounts, rdispls, recvtypes,
-                                              comm, req);
+                                              recvbuf, recvcounts, rdispls, recvtypes, comm, req);
 
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_INEIGHBOR_ALLTOALLW);
     return ret;

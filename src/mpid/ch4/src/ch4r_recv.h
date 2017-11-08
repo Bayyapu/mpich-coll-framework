@@ -77,8 +77,7 @@ static inline int MPIDI_handle_unexp_mrecv(MPIR_Request * rreq)
 
     if (message_sz > count * dt_sz) {
         rreq->status.MPI_ERROR = MPI_ERR_TRUNCATE;
-    }
-    else {
+    } else {
         rreq->status.MPI_ERROR = MPI_SUCCESS;
         count = message_sz / dt_sz;
     }
@@ -101,8 +100,7 @@ static inline int MPIDI_handle_unexp_mrecv(MPIR_Request * rreq)
                                              MPI_ERR_TYPE, "**dtypemismatch", 0);
             rreq->status.MPI_ERROR = mpi_errno;
         }
-    }
-    else {
+    } else {
         MPIR_Memcpy((char *) buf + dt_true_lb, MPIDI_CH4U_REQUEST(rreq, buffer), data_sz);
     }
 

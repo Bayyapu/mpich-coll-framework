@@ -138,8 +138,7 @@ int PrintControlVars(FILE * fp, int myThreadId)
                     mpit_scopeToStr(scope),
                     mpit_bindingToStr(binding),
                     mpit_validDtypeStr(datatype), mpit_verbosityToStr(verbosity), desc);
-        }
-        else if (DOPRINT) {
+        } else if (DOPRINT) {
             fprintf(fp, "\t%s\t%s\t%s\t%s\t%s\t%s\n",
                     name,
                     mpit_scopeToStr(scope),
@@ -184,15 +183,13 @@ int PrintPerfVars(FILE * fp, int myThreadId)
             val = perfvarReadInt(i, isContinuous, &isFound);
             if (isFound && DOPRINT)
                 fprintf(fp, "\tValue = %d\n", val);
-        }
-        else if (datatype == MPI_UNSIGNED) {
+        } else if (datatype == MPI_UNSIGNED) {
             int isFound;
             unsigned int val;
             val = perfvarReadUint(i, isContinuous, &isFound);
             if (isFound && DOPRINT)
                 fprintf(fp, "\tValue = %u\n", val);
-        }
-        else if (datatype == MPI_DOUBLE) {
+        } else if (datatype == MPI_DOUBLE) {
             int isFound;
             double val;
             val = perfvarReadDouble(i, isContinuous, &isFound);
@@ -319,8 +316,7 @@ char *mpit_validDtypeStr(MPI_Datatype datatype)
     else {
         if (datatype == MPI_DATATYPE_NULL) {
             p = "Invalid MPI datatype:NULL";
-        }
-        else {
+        } else {
             static char typename[MPI_MAX_OBJECT_NAME + 9];
             int tlen;
             strncpy(typename, "Invalid:", MPI_MAX_OBJECT_NAME);

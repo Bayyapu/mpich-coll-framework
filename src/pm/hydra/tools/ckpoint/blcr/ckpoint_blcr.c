@@ -249,20 +249,16 @@ HYD_status HYDT_ckpoint_blcr_checkpoint(const char *prefix, int pgid, int id, in
             if ((ret == CR_POLL_CHKPT_ERR_POST) && (errno == CR_ERESTARTED)) {
                 HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR,
                                     "trying to restart in a checkpoint\n");
-            }
-            else if (errno == EINTR) {
+            } else if (errno == EINTR) {
                 /* poll was interrupted by a signal -- retry */
-            }
-            else {
+            } else {
                 HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR,
                                     "cr_poll_checkpoint failed: %s\n", strerror(errno));
             }
-        }
-        else if (ret == 0) {
+        } else if (ret == 0) {
             HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR,
                                 "cr_poll_checkpoint returned 0 unexpectedly\n");
-        }
-        else {
+        } else {
             break;
         }
     }

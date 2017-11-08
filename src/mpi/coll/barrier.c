@@ -31,7 +31,7 @@ cvars:
 #elif defined(HAVE_PRAGMA_CRI_DUP)
 #pragma _CRI duplicate MPI_Barrier as PMPI_Barrier
 #elif defined(HAVE_WEAK_ATTRIBUTE)
-int MPI_Barrier(MPI_Comm comm) __attribute__((weak,alias("PMPI_Barrier")));
+int MPI_Barrier(MPI_Comm comm) __attribute__ ((weak, alias("PMPI_Barrier")));
 #endif
 /* -- End Profiling Symbol Block */
 
@@ -44,19 +44,19 @@ int MPI_Barrier(MPI_Comm comm) __attribute__((weak,alias("PMPI_Barrier")));
 
 /* This is the default implementation of the barrier operation.  The
    algorithm is:
-   
+
    Algorithm: MPI_Barrier
 
    We use the dissemination algorithm described in:
    Debra Hensgen, Raphael Finkel, and Udi Manbet, "Two Algorithms for
    Barrier Synchronization," International Journal of Parallel
-   Programming, 17(1):1-17, 1988.  
+   Programming, 17(1):1-17, 1988.
 
    It uses ceiling(lgp) steps. In step k, 0 <= k <= (ceiling(lgp)-1),
-   process i sends to process (i + 2^k) % p and receives from process 
+   process i sends to process (i + 2^k) % p and receives from process
    (i - 2^k + p) % p.
 
-   Possible improvements: 
+   Possible improvements:
 
    End Algorithm: MPI_Barrier
 
@@ -67,17 +67,16 @@ int MPI_Barrier(MPI_Comm comm) __attribute__((weak,alias("PMPI_Barrier")));
 #define FUNCNAME barrier_smp_intra
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-static int barrier_smp_intra(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
+static int barrier_smp_intra(MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag)
 {
-    int mpi_errno=MPI_SUCCESS;
+    int mpi_errno = MPI_SUCCESS;
     int mpi_errno_ret = MPI_SUCCESS;
 
     MPIR_Assert(MPIR_CVAR_ENABLE_SMP_COLLECTIVES && MPIR_CVAR_ENABLE_SMP_BARRIER &&
                 MPIR_Comm_is_node_aware(comm_ptr));
 
     /* do the intranode barrier on all nodes */
-    if (comm_ptr->node_comm != NULL)
-    {
+    if (comm_ptr->node_comm != NULL) {
         mpi_errno = MPID_Barrier(comm_ptr->node_comm, errflag);
         if (mpi_errno) {
             /* for communication errors, just record the error but continue */
@@ -99,11 +98,10 @@ static int barrier_smp_intra(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
     }
 
     /* release the local processes on each node with a 1-byte
-       broadcast (0-byte broadcast just returns without doing
-       anything) */
-    if (comm_ptr->node_comm != NULL)
-    {
-        int i=0;
+     * broadcast (0-byte broadcast just returns without doing
+     * anything) */
+    if (comm_ptr->node_comm != NULL) {
+        int i = 0;
         mpi_errno = MPID_Bcast(&i, 1, MPI_BYTE, 0, comm_ptr->node_comm, errflag);
         if (mpi_errno) {
             /* for communication errors, just record the error but continue */
@@ -125,14 +123,15 @@ static int barrier_smp_intra(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
 #define FUNCNAME MPIR_Barrier_intra
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Barrier_intra( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
+int MPIR_Barrier_intra(MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag)
 {
-    int size, mpi_errno=MPI_SUCCESS;
+    int size, mpi_errno = MPI_SUCCESS;
     int mpi_errno_ret = MPI_SUCCESS;
 
     size = comm_ptr->local_size;
     /* Trivial barriers return immediately */
-    if (size == 1) goto fn_exit;
+    if (size == 1)
+        goto fn_exit;
 
     if (MPIR_CVAR_ENABLE_SMP_COLLECTIVES && MPIR_CVAR_ENABLE_SMP_BARRIER &&
         MPIR_Comm_is_node_aware(comm_ptr)) {
@@ -154,7 +153,7 @@ int MPIR_Barrier_intra( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
         MPIR_ERR_ADD(mpi_errno_ret, mpi_errno);
     }
 
- fn_exit:
+  fn_exit:
     if (mpi_errno_ret)
         mpi_errno = mpi_errno_ret;
     else if (*errflag != MPIR_ERR_NONE)
@@ -162,25 +161,26 @@ int MPIR_Barrier_intra( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
     return mpi_errno;
 }
 
-/* not declared static because a machine-specific function may call this one 
+/* not declared static because a machine-specific function may call this one
    in some cases */
 #undef FUNCNAME
 #define FUNCNAME MPIR_Barrier_inter
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Barrier_inter( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
+int MPIR_Barrier_inter(MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag)
 {
     int rank, mpi_errno = MPI_SUCCESS, root;
     int mpi_errno_ret = MPI_SUCCESS;
     int i = 0;
     MPIR_Comm *newcomm_ptr = NULL;
-    
+
     rank = comm_ptr->rank;
 
     /* Get the local intracommunicator */
     if (!comm_ptr->local_comm) {
-	mpi_errno = MPII_Setup_intercomm_localcomm( comm_ptr );
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        mpi_errno = MPII_Setup_intercomm_localcomm(comm_ptr);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     }
 
     newcomm_ptr = comm_ptr->local_comm;
@@ -195,14 +195,14 @@ int MPIR_Barrier_inter( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
     }
 
     /* rank 0 on each group does an intercommunicator broadcast to the
-       remote group to indicate that all processes in the local group
-       have reached the barrier. We do a 1-byte bcast because a 0-byte
-       bcast will just return without doing anything. */
-    
+     * remote group to indicate that all processes in the local group
+     * have reached the barrier. We do a 1-byte bcast because a 0-byte
+     * bcast will just return without doing anything. */
+
     /* first broadcast from left to right group, then from right to
-       left group */
+     * left group */
     if (comm_ptr->is_low_group) {
-        /* bcast to right*/
+        /* bcast to right */
         root = (rank == 0) ? MPI_ROOT : MPI_PROC_NULL;
         mpi_errno = MPIR_Bcast_inter(&i, 1, MPI_BYTE, root, comm_ptr, errflag);
         if (mpi_errno) {
@@ -221,8 +221,7 @@ int MPIR_Barrier_inter( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
             MPIR_ERR_SET(mpi_errno, *errflag, "**fail");
             MPIR_ERR_ADD(mpi_errno_ret, mpi_errno);
         }
-    }
-    else {
+    } else {
         /* receive bcast from left */
         root = 0;
         mpi_errno = MPIR_Bcast_inter(&i, 1, MPI_BYTE, root, comm_ptr, errflag);
@@ -243,13 +242,13 @@ int MPIR_Barrier_inter( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
             MPIR_ERR_ADD(mpi_errno_ret, mpi_errno);
         }
     }
- fn_exit:
+  fn_exit:
     if (mpi_errno_ret)
         mpi_errno = mpi_errno_ret;
     else if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
     return mpi_errno;
- fn_fail:
+  fn_fail:
     goto fn_exit;
 }
 
@@ -257,14 +256,15 @@ int MPIR_Barrier_inter( MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag )
 #define FUNCNAME MPIR_Barrier_recursive_doubling
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Barrier_recursive_doubling(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
+int MPIR_Barrier_recursive_doubling(MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag)
 {
-    int size, rank, src, dst, mask, mpi_errno=MPI_SUCCESS;
+    int size, rank, src, dst, mask, mpi_errno = MPI_SUCCESS;
     int mpi_errno_ret = MPI_SUCCESS;
 
     size = comm_ptr->local_size;
     /* Trivial barriers return immediately */
-    if (size == 1) goto fn_exit;
+    if (size == 1)
+        goto fn_exit;
 
     rank = comm_ptr->rank;
 
@@ -273,9 +273,8 @@ int MPIR_Barrier_recursive_doubling(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag
         dst = (rank + mask) % size;
         src = (rank - mask + size) % size;
         mpi_errno = MPIC_Sendrecv(NULL, 0, MPI_BYTE, dst,
-                                     MPIR_BARRIER_TAG, NULL, 0, MPI_BYTE,
-                                     src, MPIR_BARRIER_TAG, comm_ptr,
-                                     MPI_STATUS_IGNORE, errflag);
+                                  MPIR_BARRIER_TAG, NULL, 0, MPI_BYTE,
+                                  src, MPIR_BARRIER_TAG, comm_ptr, MPI_STATUS_IGNORE, errflag);
         if (mpi_errno) {
             /* for communication errors, just record the error but continue */
             *errflag = MPIR_ERR_GET_CLASS(mpi_errno);
@@ -285,7 +284,7 @@ int MPIR_Barrier_recursive_doubling(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag
         mask <<= 1;
     }
 
- fn_exit:
+  fn_exit:
     if (mpi_errno_ret)
         mpi_errno = mpi_errno_ret;
     else if (*errflag != MPIR_ERR_NONE)
@@ -300,23 +299,25 @@ int MPIR_Barrier_recursive_doubling(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag
 #define FUNCNAME MPIR_Barrier
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Barrier(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
+int MPIR_Barrier(MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag)
 {
     int mpi_errno = MPI_SUCCESS;
 
     if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
         /* intracommunicator */
-        mpi_errno = MPIR_Barrier_intra( comm_ptr, errflag );
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        mpi_errno = MPIR_Barrier_intra(comm_ptr, errflag);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     } else {
         /* intercommunicator */
-        mpi_errno = MPIR_Barrier_inter( comm_ptr, errflag );
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        mpi_errno = MPIR_Barrier_inter(comm_ptr, errflag);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     }
 
- fn_exit:
+  fn_exit:
     return mpi_errno;
- fn_fail:
+  fn_fail:
     goto fn_exit;
 }
 
@@ -329,27 +330,26 @@ int MPIR_Barrier(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
 #define FUNCNAME MPIR_Barrier_impl
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-int MPIR_Barrier_impl(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
+int MPIR_Barrier_impl(MPIR_Comm * comm_ptr, MPIR_Errflag_t * errflag)
 {
     int mpi_errno = MPI_SUCCESS;
-    if (comm_ptr->coll_fns != NULL && comm_ptr->coll_fns->Barrier != NULL)
-    {
-	/* --BEGIN USEREXTENSION-- */
-	mpi_errno = comm_ptr->coll_fns->Barrier(comm_ptr, errflag);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
-	/* --END USEREXTENSION-- */
-    }
-    else
-    {
+    if (comm_ptr->coll_fns != NULL && comm_ptr->coll_fns->Barrier != NULL) {
+        /* --BEGIN USEREXTENSION-- */
+        mpi_errno = comm_ptr->coll_fns->Barrier(comm_ptr, errflag);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
+        /* --END USEREXTENSION-- */
+    } else {
         mpi_errno = MPIR_Barrier(comm_ptr, errflag);
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+        if (mpi_errno)
+            MPIR_ERR_POP(mpi_errno);
     }
-        
- fn_exit:
+
+  fn_exit:
     if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
     return mpi_errno;
- fn_fail:
+  fn_fail:
     goto fn_exit;
 }
 
@@ -366,13 +366,13 @@ int MPIR_Barrier_impl(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
 /*@
 
 MPI_Barrier - Blocks until all processes in the communicator have
-reached this routine.  
+reached this routine.
 
 Input Parameters:
-. comm - communicator (handle) 
+. comm - communicator (handle)
 
 Notes:
-Blocks the caller until all processes in the communicator have called it; 
+Blocks the caller until all processes in the communicator have called it;
 that is, the call returns at any process only after all members of the
 communicator have entered the call.
 
@@ -384,7 +384,7 @@ communicator have entered the call.
 .N MPI_SUCCESS
 .N MPI_ERR_COMM
 @*/
-int MPI_Barrier( MPI_Comm comm )
+int MPI_Barrier(MPI_Comm comm)
 {
     int mpi_errno = MPI_SUCCESS;
     MPIR_Comm *comm_ptr = NULL;
@@ -392,42 +392,44 @@ int MPI_Barrier( MPI_Comm comm )
     MPIR_FUNC_TERSE_STATE_DECL(MPID_STATE_MPI_BARRIER);
 
     MPIR_ERRTEST_INITIALIZED_ORDIE();
-    
+
     MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     MPIR_FUNC_TERSE_COLL_ENTER(MPID_STATE_MPI_BARRIER);
-    
-    /* Validate parameters, especially handles needing to be converted */
-#   ifdef HAVE_ERROR_CHECKING
-    {
-        MPID_BEGIN_ERROR_CHECKS;
-        {
-	    MPIR_ERRTEST_COMM(comm, mpi_errno);
-	}
-        MPID_END_ERROR_CHECKS;
-    }
-#   endif /* HAVE_ERROR_CHECKING */
 
-    /* Convert MPI object handles to object pointers */
-    MPIR_Comm_get_ptr( comm, comm_ptr );
-    
-    /* Validate parameters and objects (post conversion) */
-#   ifdef HAVE_ERROR_CHECKING
+    /* Validate parameters, especially handles needing to be converted */
+#ifdef HAVE_ERROR_CHECKING
     {
         MPID_BEGIN_ERROR_CHECKS;
         {
-	    /* Validate communicator */
-            MPIR_Comm_valid_ptr( comm_ptr, mpi_errno, FALSE );
-            if (mpi_errno) goto fn_fail;
+            MPIR_ERRTEST_COMM(comm, mpi_errno);
         }
         MPID_END_ERROR_CHECKS;
     }
-#   endif /* HAVE_ERROR_CHECKING */
+#endif /* HAVE_ERROR_CHECKING */
+
+    /* Convert MPI object handles to object pointers */
+    MPIR_Comm_get_ptr(comm, comm_ptr);
+
+    /* Validate parameters and objects (post conversion) */
+#ifdef HAVE_ERROR_CHECKING
+    {
+        MPID_BEGIN_ERROR_CHECKS;
+        {
+            /* Validate communicator */
+            MPIR_Comm_valid_ptr(comm_ptr, mpi_errno, FALSE);
+            if (mpi_errno)
+                goto fn_fail;
+        }
+        MPID_END_ERROR_CHECKS;
+    }
+#endif /* HAVE_ERROR_CHECKING */
 
     /* ... body of routine ...  */
 
     mpi_errno = MPID_Barrier(comm_ptr, &errflag);
-    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
-    
+    if (mpi_errno)
+        MPIR_ERR_POP(mpi_errno);
+
     /* ... end of body of routine ... */
 
   fn_exit:
@@ -437,14 +439,14 @@ int MPI_Barrier( MPI_Comm comm )
 
   fn_fail:
     /* --BEGIN ERROR HANDLING-- */
-#   ifdef HAVE_ERROR_CHECKING
+#ifdef HAVE_ERROR_CHECKING
     {
-	mpi_errno = MPIR_Err_create_code(
-	    mpi_errno, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, MPI_ERR_OTHER, 
-	    "**mpi_barrier", "**mpi_barrier %C", comm);
+        mpi_errno =
+            MPIR_Err_create_code(mpi_errno, MPIR_ERR_RECOVERABLE, FCNAME, __LINE__, MPI_ERR_OTHER,
+                                 "**mpi_barrier", "**mpi_barrier %C", comm);
     }
-#   endif
-    mpi_errno = MPIR_Err_return_comm( comm_ptr, FCNAME, mpi_errno );
+#endif
+    mpi_errno = MPIR_Err_return_comm(comm_ptr, FCNAME, mpi_errno);
     goto fn_exit;
     /* --END ERROR HANDLING-- */
 }

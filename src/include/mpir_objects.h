@@ -95,19 +95,19 @@
 /*TOpaqOverview.tex
   MPI Opaque Objects:
 
-  MPI Opaque objects such as 'MPI_Comm' or 'MPI_Datatype' are specified by 
+  MPI Opaque objects such as 'MPI_Comm' or 'MPI_Datatype' are specified by
   integers (in the MPICH implementation); the MPI standard calls these
-  handles.  
+  handles.
   Out of range values are invalid; the value 0 is reserved.
-  For most (with the possible exception of 
+  For most (with the possible exception of
   'MPI_Request' for performance reasons) MPI Opaque objects, the integer
   encodes both the kind of object (allowing runtime tests to detect a datatype
-  passed where a communicator is expected) and important properties of the 
-  object.  Even the 'MPI_xxx_NULL' values should be encoded so that 
+  passed where a communicator is expected) and important properties of the
+  object.  Even the 'MPI_xxx_NULL' values should be encoded so that
   different null handles can be distinguished.  The details of the encoding
   of the handles is covered in more detail in the MPICH Design Document.
   For the most part, the ADI uses pointers to the underlying structures
-  rather than the handles themselves.  However, each structure contains an 
+  rather than the handles themselves.  However, each structure contains an
   'handle' field that is the corresponding integer handle for the MPI object.
 
   MPIR objects are not opaque.
@@ -142,25 +142,25 @@
   Attribute-DS
   E*/
 typedef enum MPII_Object_kind {
-  MPIR_COMM       = 0x1,
-  MPIR_GROUP      = 0x2,
-  MPIR_DATATYPE   = 0x3,
-  MPIR_FILE       = 0x4, /* only used obliquely inside MPIR_Errhandler objs */
-  MPIR_ERRHANDLER = 0x5,
-  MPIR_OP         = 0x6,
-  MPIR_INFO       = 0x7,
-  MPIR_WIN        = 0x8,
-  MPIR_KEYVAL     = 0x9,
-  MPIR_ATTR       = 0xa,
-  MPIR_REQUEST    = 0xb,
-  MPIR_PROCGROUP  = 0xc,               /* These are internal device objects */
-  MPIR_VCONN      = 0xd,
-  MPIR_GREQ_CLASS = 0xf
+    MPIR_COMM = 0x1,
+    MPIR_GROUP = 0x2,
+    MPIR_DATATYPE = 0x3,
+    MPIR_FILE = 0x4,    /* only used obliquely inside MPIR_Errhandler objs */
+    MPIR_ERRHANDLER = 0x5,
+    MPIR_OP = 0x6,
+    MPIR_INFO = 0x7,
+    MPIR_WIN = 0x8,
+    MPIR_KEYVAL = 0x9,
+    MPIR_ATTR = 0xa,
+    MPIR_REQUEST = 0xb,
+    MPIR_PROCGROUP = 0xc,       /* These are internal device objects */
+    MPIR_VCONN = 0xd,
+    MPIR_GREQ_CLASS = 0xf
 } MPII_Object_kind;
 
 
 #define HANDLE_MPI_KIND_SHIFT 26
-#define HANDLE_GET_MPI_KIND(a) ( ((a)&0x3c000000) >> HANDLE_MPI_KIND_SHIFT )
+#define HANDLE_GET_MPI_KIND(a) (((a)&0x3c000000) >> HANDLE_MPI_KIND_SHIFT)
 #define HANDLE_SET_MPI_KIND(a,kind) ((a) | ((kind) << HANDLE_MPI_KIND_SHIFT))
 
 /* returns the name of the handle kind for debugging/logging purposes */
@@ -198,7 +198,7 @@ const char *MPIR_Handle_get_kind_str(int kind);
 #define HANDLE_NUM_INDICES 1024
 #endif /* MPID_HANDLE_NUM_INDICES */
 
-/* For direct, the remainder of the handle is the index into a predefined 
+/* For direct, the remainder of the handle is the index into a predefined
    block */
 #define HANDLE_MASK 0x03FFFFFF
 #define HANDLE_INDEX(a) ((a)& HANDLE_MASK)
@@ -343,7 +343,7 @@ typedef OPA_int_t Handle_ref_count;
  * It is also assumed that any object being reference counted via these macros
  * will have a valid value in the handle field, even if it is
  * HANDLE_SET_KIND(0, HANDLE_KIND_INVALID) */
-/* TODO profile and examine the assembly that is generated for this if() on Blue
+/* TODO profile and examine the assembly that is generated for this if () on Blue
  * Gene (and elsewhere).  We may need to mark it unlikely(). */
 #define MPIR_Object_add_ref(objptr_)                           \
     do {                                                       \
@@ -403,34 +403,34 @@ typedef OPA_int_t Handle_ref_count;
  * NOTE: This macro *must* be invoked as the very first element of the structure! */
 #define MPIR_OBJECT_HEADER             \
     int handle;                        \
-    Handle_ref_count ref_count/*semicolon intentionally omitted*/
+    Handle_ref_count ref_count  /*semicolon intentionally omitted */
 
 /* ALL objects have the handle as the first value. */
-/* Inactive (unused and stored on the appropriate avail list) objects 
+/* Inactive (unused and stored on the appropriate avail list) objects
    have MPIR_Handle_common as the head */
 typedef struct MPIR_Handle_common {
     MPIR_OBJECT_HEADER;
-    void *next;   /* Free handles use this field to point to the next
-                     free object */
+    void *next;                 /* Free handles use this field to point to the next
+                                 * free object */
 } MPIR_Handle_common;
 
 /* This type contains all of the data, except for the direct array,
    used by the object allocators. */
 typedef struct MPIR_Object_alloc_t {
-    MPIR_Handle_common *avail;          /* Next available object */
-    int                initialized;     /* */
-    void              *(*indirect)[];   /* Pointer to indirect object blocks */
-    int                indirect_size;   /* Number of allocated indirect blocks */
-    MPII_Object_kind   kind;            /* Kind of object this is for */
-    int                size;            /* Size of an individual object */
-    void               *direct;         /* Pointer to direct block, used 
-                                           for allocation */
-    int                direct_size;     /* Size of direct block */
+    MPIR_Handle_common *avail;  /* Next available object */
+    int initialized;            /* */
+    void *(*indirect)[];        /* Pointer to indirect object blocks */
+    int indirect_size;          /* Number of allocated indirect blocks */
+    MPII_Object_kind kind;      /* Kind of object this is for */
+    int size;                   /* Size of an individual object */
+    void *direct;               /* Pointer to direct block, used
+                                 * for allocation */
+    int direct_size;            /* Size of direct block */
 } MPIR_Object_alloc_t;
 static inline void *MPIR_Handle_obj_alloc(MPIR_Object_alloc_t *);
 static inline void *MPIR_Handle_obj_alloc_unsafe(MPIR_Object_alloc_t *);
-static inline void  MPIR_Handle_obj_free( MPIR_Object_alloc_t *, void * );
-static inline void *MPIR_Handle_get_ptr_indirect( int, MPIR_Object_alloc_t * );
+static inline void MPIR_Handle_obj_free(MPIR_Object_alloc_t *, void *);
+static inline void *MPIR_Handle_get_ptr_indirect(int, MPIR_Object_alloc_t *);
 
 
 /* Convert Handles to objects for MPI types that have predefined objects */
@@ -513,4 +513,4 @@ static inline void *MPIR_Handle_get_ptr_indirect( int, MPIR_Object_alloc_t * );
     }                                                                   \
 }
 
-#endif  /* MPIR_OBJECTS_H_INCLUDED */
+#endif /* MPIR_OBJECTS_H_INCLUDED */

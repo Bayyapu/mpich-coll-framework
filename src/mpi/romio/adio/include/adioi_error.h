@@ -4,7 +4,7 @@
  *      See COPYRIGHT in top-level directory.
  */
 
-#include <string.h> /* for strerror() */
+#include <string.h>     /* for strerror() */
 
 /* MPIO_CHECK_XXX macros are used to clean up error checking and
  * handling in many of the romio/mpi-io/ source files.
@@ -156,7 +156,7 @@ if (!ADIO_Feature(fh, ADIO_SHARED_FP))                                  \
 
 /* TODO: handle the independent io case more gracefully  */
 #define ADIOI_TEST_DEFERRED(fh, myname, error_code)\
-    if(! (fh)->is_open ) {\
+    if (! (fh)->is_open) {\
 	    ADIO_ImmediateOpen((fh), (error_code)); }
 
 /* Check MPI_Info object by calling MPI_Info_dup, if the info object is valid
@@ -172,7 +172,7 @@ then the dup operation will succeed */
 	error_code = MPI_Info_dup(info, &dupinfo);  \
     }                                               \
     MPI_Allreduce(&error_code, &tmp_err, 1, MPI_INT, MPI_MAX, comm); \
-    if(tmp_err != MPI_SUCCESS) {                                            \
+    if (tmp_err != MPI_SUCCESS) {                                            \
 	error_code = MPIO_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE, \
 		myname, __LINE__, MPI_ERR_OTHER, "**info", 0); \
 	goto fn_fail; \
