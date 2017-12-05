@@ -7,6 +7,39 @@
 
 #include "mpiimpl.h"
 
+/*
+=== BEGIN_MPI_T_CVAR_INFO_BLOCK ===
+
+cvars:
+    - name        : MPIR_CVAR_EXSCAN_ALGORITHM_INTRA
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select exscan algorithm
+        auto - Internal algorithm selection
+        recursive_doubling - Force recursive_doubling algorithm
+
+    - name        : MPIR_CVAR_EXSCAN_DEVICE_COLLECTIVE
+      category    : COLLECTIVE
+      type        : boolean
+      default     : true
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        If set to true, MPI_Exscan will use allow the device to override the
+        default, MPIR-level collective algorithms. The device still has the
+        option to call the MPIR-level algorithms manually.
+        If set to false, the device-level exscan function will not be
+        called.
+
+=== END_MPI_T_CVAR_INFO_BLOCK ===
+*/
+
 /* -- Begin Profiling Symbol Block for routine MPI_Exscan */
 #if defined(HAVE_PRAGMA_WEAK)
 #pragma weak MPI_Exscan = PMPI_Exscan
@@ -81,6 +114,32 @@ int MPI_Exscan(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datat
    is intended to be used by device-specific implementations of
    exscan. */
 #undef FUNCNAME
+#define FUNCNAME MPIR_Exscan_intra
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Exscan_intra (
+    const void *sendbuf,
+    void *recvbuf,
+    int count,
+    MPI_Datatype datatype,
+    MPI_Op op,
+    MPIR_Comm *comm_ptr,
+    MPIR_Errflag_t *errflag )
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Exscan_recursive_doubling (sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    if (*errflag != MPIR_ERR_NONE)
+        MPIR_ERR_SET(mpi_errno, MPI_ERR_OTHER, "**coll_fail");
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPIR_Exscan
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -94,15 +153,24 @@ int MPIR_Exscan (
     MPIR_Errflag_t *errflag )
 {
     int mpi_errno = MPI_SUCCESS;
-    int mpi_errno_ret = MPI_SUCCESS;
     
-    mpi_errno = MPIR_Exscan_recursive_doubling (sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        switch (MPIR_Exscan_alg_intra_choice) {
+            case MPIR_EXSCAN_ALG_INTRA_RECURSIVE_DOUBLING:
+                mpi_errno = MPIR_Exscan_recursive_doubling(sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+                break;
+            case MPIR_EXSCAN_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Exscan_intra(sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+                break;
+        }
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
-    if (mpi_errno_ret)
-        mpi_errno = mpi_errno_ret;
-    else if (*errflag != MPIR_ERR_NONE)
+    if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, MPI_ERR_OTHER, "**coll_fail");
     return mpi_errno;
 fn_fail:
@@ -231,7 +299,11 @@ int MPI_Exscan(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datat
 
     /* ... body of routine ...  */
 
-    mpi_errno = MPID_Exscan(sendbuf, recvbuf, count, datatype, op, comm_ptr, &errflag);
+    if (MPIR_CVAR_EXSCAN_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIVES) {
+        mpi_errno = MPID_Exscan(sendbuf, recvbuf, count, datatype, op, comm_ptr, &errflag);
+    } else {
+        mpi_errno = MPIR_Exscan(sendbuf, recvbuf, count, datatype, op, comm_ptr, &errflag);
+    }
     if (mpi_errno) goto fn_fail;
 
     /* ... end of body of routine ... */

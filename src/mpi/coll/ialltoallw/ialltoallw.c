@@ -115,6 +115,7 @@ int MPIR_Ialltoallw_intra_sched(const void *sendbuf, const int sendcounts[], con
                                                   sendtypes, recvbuf, recvcounts,
                                                   rdispls, recvtypes, comm_ptr, s);
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
     return mpi_errno;
@@ -136,8 +137,12 @@ int MPIR_Ialltoallw_inter_sched(const void *sendbuf, const int sendcounts[], con
     mpi_errno = MPIR_Ialltoallw_pairwise_xchg_sched(sendbuf, sendcounts, sdispls,
                                                     sendtypes, recvbuf, recvcounts,
                                                     rdispls, recvtypes, comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -184,8 +189,12 @@ int MPIR_Ialltoallw_sched(const void *sendbuf, const int sendcounts[], const int
                 break;
         }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -209,7 +218,7 @@ int MPIR_Ialltoallw(const void *sendbuf, const int sendcounts[], const int sdisp
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Ialltoallw_sched(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr, s);
+    mpi_errno = MPIR_Ialltoallw_sched(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);
@@ -321,7 +330,7 @@ int MPI_Ialltoallw(const void *sendbuf, const int sendcounts[], const int sdispl
         mpi_errno = MPIR_Ialltoallw(sendbuf, sendcounts, sdispls, sendtype, recvbuf,
                     recvcounts, rdispls, recvtype, comm_ptr, request);
     }
-   if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     /* ... end of body of routine ... */
 

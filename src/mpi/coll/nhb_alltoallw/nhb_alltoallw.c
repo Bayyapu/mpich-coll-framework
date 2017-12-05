@@ -6,6 +6,38 @@
 
 #include "mpiimpl.h"
 
+/*
+=== BEGIN_MPI_T_CVAR_INFO_BLOCK ===
+
+cvars:
+    - name        : MPIR_CVAR_NEIGHBOR_ALLTOALLW_ALGORITHM_INTRA
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select neighbor_alltoallw algorithm
+        auto - Internal algorithm selection
+        non-blocking - Force non-blocking algorithm
+
+    - name        : MPIR_CVAR_NEIGHBOR_ALLTOALLW_DEVICE_COLLECTIVE
+      category    : COLLECTIVE
+      type        : boolean
+      default     : true
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        If set to true, MPI_Neighbor_alltoallw will use allow the device to override the default, MPIR-level collective algorithms. The device still has the
+        option to call the MPIR-level algorithms manually.
+        If set to false, the device-level neighbor_alltoallw function will not be
+        called.
+
+=== END_MPI_T_CVAR_INFO_BLOCK ===
+*/
+
 /* -- Begin Profiling Symbol Block for routine MPI_Neighbor_alltoallw */
 #if defined(HAVE_PRAGMA_WEAK)
 #pragma weak MPI_Neighbor_alltoallw = PMPI_Neighbor_alltoallw
@@ -26,6 +58,24 @@ int MPI_Neighbor_alltoallw(const void *sendbuf, const int sendcounts[], const MP
 #undef MPI_Neighbor_alltoallw
 #define MPI_Neighbor_alltoallw PMPI_Neighbor_alltoallw
 
+#undef FUNCNAME
+#define FUNCNAME MPIR_Neighbor_alltoallw_intra
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Neighbor_alltoallw_intra(const void *sendbuf, const int sendcounts[], const int sdispls[], MPI_Datatype sendtype, void *recvbuf, const int recvcounts[], const int rdispls[], MPI_Datatype recvtype, MPIR_Comm *comm_ptr)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Neighbor_alltoallw_nb(sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm_ptr);
+
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
 /* any non-MPI functions go here, especially non-static ones */
 
 #undef FUNCNAME
@@ -36,7 +86,24 @@ int MPIR_Neighbor_alltoallw(const void *sendbuf, const int sendcounts[], const M
 {
     int mpi_errno = MPI_SUCCESS;
 
-    mpi_errno = MPIR_Neighbor_alltoallw_nb(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        switch (MPIR_Neighbor_alltoallw_alg_intra_choice) {
+            case MPIR_NEIGHBOR_ALLTOALLW_ALG_INTRA_NONBLOCKING:
+                /* just call the nonblocking version and wait on it */
+                mpi_errno = MPIR_Neighbor_alltoallw_nb(sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm_ptr);
+                break;
+            case MPIR_NEIGHBOR_ALLTOALLW_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Neighbor_alltoallw_intra(sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm_ptr);
+                break;
+        }
+    } else {
+        /* intercommunicator */
+        mpi_errno = MPI_ERR_OTHER;
+        goto fn_fail;
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
@@ -115,7 +182,11 @@ int MPI_Neighbor_alltoallw(const void *sendbuf, const int sendcounts[], const MP
 
     /* ... body of routine ...  */
 
-    mpi_errno = MPID_Neighbor_alltoallw(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr);
+    if (MPIR_CVAR_NEIGHBOR_ALLTOALLW_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIV    ES) {
+        mpi_errno = MPID_Neighbor_alltoallw(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr);
+    } else {
+        mpi_errno = MPIR_Neighbor_alltoallw(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr);
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     /* ... end of body of routine ... */

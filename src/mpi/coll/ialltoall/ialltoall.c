@@ -276,8 +276,12 @@ int MPIR_Ialltoall_sched(const void *sendbuf, int sendcount, MPI_Datatype sendty
                 break;
         }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -298,7 +302,7 @@ int MPIR_Ialltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype, vo
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Ialltoall_sched(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm_ptr, s);
+    mpi_errno = MPIR_Ialltoall_sched(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);

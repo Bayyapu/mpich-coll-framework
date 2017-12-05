@@ -135,8 +135,12 @@ int MPIR_Ireduce_scatter_block_inter_sched(const void *sendbuf, void *recvbuf, i
     int mpi_errno = MPI_SUCCESS;
 
     MPIR_Ireduce_scatter_block_default_inter_sched(sendbuf, recvbuf, recvcount, datatype, op, comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -189,8 +193,12 @@ int MPIR_Ireduce_scatter_block_sched(const void *sendbuf, void *recvbuf, int rec
                            recvcounts, datatype, op, comm_ptr, s);
        }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -211,7 +219,7 @@ int MPIR_Ireduce_scatter_block(const void *sendbuf, void *recvbuf, int recvcount
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Ireduce_scatter_block_sched(sendbuf, recvbuf, recvcount, datatype, op, comm_ptr, s);
+    mpi_errno = MPIR_Ireduce_scatter_block_sched(sendbuf, recvbuf, recvcount, datatype, op, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);

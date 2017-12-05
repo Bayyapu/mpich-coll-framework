@@ -285,8 +285,12 @@ int MPIR_Iallgatherv_sched(const void *sendbuf, int sendcount, MPI_Datatype send
                 break;
         }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -309,7 +313,7 @@ int MPIR_Iallgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Iallgatherv_sched(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, comm_ptr, s);
+    mpi_errno = MPIR_Iallgatherv_sched(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);
@@ -436,11 +440,11 @@ int MPI_Iallgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, v
     if (MPIR_CVAR_IALLGATHERV_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIVES) {
         mpi_errno = MPID_Iallgatherv(sendbuf, sendcount, sendtype, recvbuf, recvcounts,
                     displs, recvtype, comm_ptr, request);
-        } else {
+    } else {
         mpi_errno = MPIR_Iallgatherv(sendbuf, sendcount, sendtype, recvbuf, recvcounts,
                     displs, recvtype, comm_ptr, request);
-        }
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+    }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     /* ... end of body of routine ... */
 

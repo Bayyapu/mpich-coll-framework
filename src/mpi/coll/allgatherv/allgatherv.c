@@ -141,7 +141,6 @@ int MPIR_Allgatherv_intra (
 {
     int        comm_size, i;
     int mpi_errno = MPI_SUCCESS;
-    int mpi_errno_ret = MPI_SUCCESS;
     int total_count, recvtype_size; 
         
 #ifdef MPID_HAS_HETERO
@@ -184,9 +183,7 @@ int MPIR_Allgatherv_intra (
     }
 
  fn_exit:
-    if (mpi_errno_ret)
-        mpi_errno = mpi_errno_ret;
-    else if (*errflag != MPIR_ERR_NONE)
+    if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
 
     return mpi_errno;
@@ -374,7 +371,7 @@ int MPIR_Allgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
             break;
         }
     }
-        if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
  fn_exit:
     return mpi_errno;

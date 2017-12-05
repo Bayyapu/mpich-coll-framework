@@ -406,7 +406,7 @@ int MPI_Barrier( MPI_Comm comm )
     if (MPIR_CVAR_BARRIER_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIVES) {
         mpi_errno = MPID_Barrier(comm_ptr, &errflag);
     } else {
-        mpi_errno = MPID_Barrier(comm_ptr, &errflag);
+        mpi_errno = MPIR_Barrier(comm_ptr, &errflag);
     }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
     

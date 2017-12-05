@@ -98,6 +98,7 @@ int MPIR_Ialltoallv_intra_sched(const void *sendbuf, const int sendcounts[], con
                                                   sendtype, recvbuf, recvcounts,
                                                   rdispls, recvtype, comm_ptr, s);
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
     return mpi_errno;
@@ -120,7 +121,12 @@ int MPIR_Ialltoallv_inter_sched(const void *sendbuf, const int sendcounts[], con
                                             sendtype, recvbuf, recvcounts,
                                             rdispls, recvtype, comm_ptr, s);
 
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -167,8 +173,12 @@ int MPIR_Ialltoallv_sched(const void *sendbuf, const int sendcounts[], const int
                 break;
         }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -192,7 +202,7 @@ int MPIR_Ialltoallv(const void *sendbuf, const int sendcounts[], const int sdisp
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Ialltoallv_sched(sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm_ptr, s);
+    mpi_errno = MPIR_Ialltoallv_sched(sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);

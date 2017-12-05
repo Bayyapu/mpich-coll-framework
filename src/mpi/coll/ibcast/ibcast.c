@@ -95,7 +95,10 @@ static int sched_test_length(MPIR_Comm * comm, int tag, void *state)
                      "**collective_size_mismatch",
                   "**collective_size_mismatch %d %d", status->n_bytes, recv_size);
     }
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 /* any non-MPI functions go here, especially non-static ones */
@@ -247,8 +250,12 @@ int MPIR_Ibcast_inter_sched(void *buffer, int count, MPI_Datatype datatype, int 
     int mpi_errno = MPI_SUCCESS;
 
     mpi_errno = MPIR_Ibcast_flat_sched(buffer, count, datatype, root, comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -283,7 +290,7 @@ int MPIR_Ibcast_sched(void *buffer, int count, MPI_Datatype datatype, int root, 
             case MPIR_IBCAST_ALG_INTER_FLAT:
                 mpi_errno = MPIR_Ibcast_flat_sched(buffer, count, datatype, root,
                             comm_ptr, s);
-                 break;
+                break;
             case MPIR_IBCAST_ALG_INTER_AUTO:
             ATTRIBUTE((fallthrough));
             default:
@@ -292,8 +299,12 @@ int MPIR_Ibcast_sched(void *buffer, int count, MPI_Datatype datatype, int root, 
                 break;
          }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -314,7 +325,7 @@ int MPIR_Ibcast(void *buffer, int count, MPI_Datatype datatype, int root, MPIR_C
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Ibcast_sched(buffer, count, datatype, root, comm_ptr, s);
+    mpi_errno = MPIR_Ibcast_sched(buffer, count, datatype, root, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);
@@ -412,7 +423,7 @@ int MPI_Ibcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Com
     if (MPIR_CVAR_IBCAST_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIVES) {
         mpi_errno = MPID_Ibcast(buffer, count, datatype, root, comm_ptr, request);
     } else {
-        mpi_errno = MPID_Ibcast(buffer, count, datatype, root, comm_ptr, request);
+        mpi_errno = MPIR_Ibcast(buffer, count, datatype, root, comm_ptr, request);
     }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 

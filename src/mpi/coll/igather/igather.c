@@ -134,6 +134,7 @@ int MPIR_Igather_inter_sched(const void *sendbuf, int sendcount, MPI_Datatype se
     } else {
         mpi_errno = MPIR_Igather_long_inter_sched(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
     return mpi_errno;
@@ -158,9 +159,9 @@ int MPIR_Igather_sched(const void *sendbuf, int sendcount, MPI_Datatype sendtype
                 mpi_errno = MPIR_Igather_binomial_sched(sendbuf, sendcount, sendtype,
                             recvbuf, recvcount, recvtype, root, comm_ptr, s);
                 break;
-           case MPIR_IGATHER_ALG_INTRA_AUTO:
-           ATTRIBUTE((fallthrough));
-           default:
+            case MPIR_IGATHER_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
                 mpi_errno = MPIR_Igather_intra_sched(sendbuf, sendcount, sendtype,
                             recvbuf, recvcount, recvtype, root, comm_ptr, s);
                 break;
@@ -183,8 +184,12 @@ int MPIR_Igather_sched(const void *sendbuf, int sendcount, MPI_Datatype sendtype
                             recvcount, recvtype, root, comm_ptr, s);
         }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -205,7 +210,7 @@ int MPIR_Igather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Igather_sched(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    mpi_errno = MPIR_Igather_sched(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);

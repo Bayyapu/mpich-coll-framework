@@ -52,6 +52,46 @@ cvars:
         If set to false, the device-level redscat function will not be
         called.
 
+    - name        : MPIR_CVAR_REDSCAT_ALGORITHM_INTRA
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select reduce_scatter algorithm
+        auto - Internal algorithm selection
+        noncomm - Force noncomm algorithm
+        recursive_doubling - Force recursive doubling algorithm
+        pairwise - Force pairwise algorithm
+        recursive_halving - Force recursive halving algorithm
+
+    - name        : MPIR_CVAR_REDSCAT_ALGORITHM_INTER
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select reduce_scatter algorithm
+        auto - Internal algorithm selection
+
+    - name        : MPIR_CVAR_REDSCAT_DEVICE_COLLECTIVE
+      category    : COLLECTIVE
+      type        : boolean
+      default     : true
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        If set to true, MPI_Redscat will use allow the device to override the
+        default, MPIR-level collective algorithms. The device still has the
+        option to call the MPIR-level algorithms manually.
+        If set to false, the device-level redscat function will not be
+        called.
+
 === END_MPI_T_CVAR_INFO_BLOCK ===
 */
 
@@ -402,7 +442,7 @@ int MPIR_Reduce_scatter(const void *sendbuf, void *recvbuf, const int recvcounts
                 mpi_errno = MPIR_Reduce_scatter_noncomm(sendbuf, recvbuf,
                             recvcounts, datatype, op, comm_ptr, errflag);
                 break;
-	    case MPIR_REDUCE_SCATTER_ALG_INTRA_PAIRWISE:
+            case MPIR_REDUCE_SCATTER_ALG_INTRA_PAIRWISE:
                 mpi_errno = MPIR_Reduce_scatter_pairwise(sendbuf, recvbuf,
                             recvcounts, datatype, op, comm_ptr, errflag);
                 break;

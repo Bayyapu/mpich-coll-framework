@@ -160,7 +160,6 @@ int MPIR_Allgather_intra (
 {
     int comm_size;
     int mpi_errno = MPI_SUCCESS;
-    int mpi_errno_ret = MPI_SUCCESS;
     MPI_Aint tot_bytes;
     int type_size;
 
@@ -193,9 +192,7 @@ int MPIR_Allgather_intra (
     }
 
  fn_exit:
-    if (mpi_errno_ret)
-        mpi_errno = mpi_errno_ret;
-    else if (*errflag != MPIR_ERR_NONE)
+    if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
 
     return mpi_errno;

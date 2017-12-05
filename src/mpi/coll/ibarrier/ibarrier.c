@@ -103,8 +103,12 @@ int MPIR_Ibarrier_intra_sched(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
     int mpi_errno = MPI_SUCCESS;
 
     mpi_errno = MPIR_Ibarrier_rec_dbl_sched(comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 /* It will choose between several different algorithms based on the given
@@ -118,8 +122,12 @@ int MPIR_Ibarrier_inter_sched(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
     int mpi_errno;
 
     mpi_errno = MPIR_Ibarrier_bcast_sched(comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -155,8 +163,12 @@ int MPIR_Ibarrier_sched(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
                 break;
         }
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -178,7 +190,7 @@ int MPIR_Ibarrier(MPIR_Comm *comm_ptr, MPI_Request *request)
         mpi_errno = MPIR_Sched_create(&s);
         if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-        mpi_errno = MPID_Ibarrier_sched(comm_ptr, s);
+        mpi_errno = MPIR_Ibarrier_sched(comm_ptr, s);
         if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
         mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);

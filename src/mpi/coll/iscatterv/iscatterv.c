@@ -6,6 +6,51 @@
 
 #include "mpiimpl.h"
 
+/*
+=== BEGIN_MPI_T_CVAR_INFO_BLOCK ===
+
+cvars:
+    - name        : MPIR_CVAR_ISCATTERV_ALGORITHM_INTRA
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select iscatterv algorithm
+        auto - Internal algorithm selection
+        linear - Force linear algorithm
+
+    - name        : MPIR_CVAR_ISCATTERV_ALGORITHM_INTER
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select iscatterv algorithm
+        auto - Internal algorithm selection
+        linear - Force linear algorithm
+
+    - name        : MPIR_CVAR_ISCATTERV_DEVICE_COLLECTIVE
+      category    : COLLECTIVE
+      type        : boolean
+      default     : true
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        If set to true, MPI_Iscatterv will use allow the device to override the
+        default, MPIR-level collective algorithms. The device still has the
+        option to call the MPIR-level algorithms manually.
+        If set to false, the device-level iscatterv function will not be
+        called.
+
+=== END_MPI_T_CVAR_INFO_BLOCK ===
+*/
+
 /* -- Begin Profiling Symbol Block for routine MPI_Iscatterv */
 #if defined(HAVE_PRAGMA_WEAK)
 #pragma weak MPI_Iscatterv = PMPI_Iscatterv
@@ -45,6 +90,44 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
 
    End Algorithm: MPI_Scatterv
 */
+#undef FUNCNAME
+#define FUNCNAME MPIR_Iscatterv_intra_sched
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Iscatterv_intra_sched(const void *sendbuf, const int sendcounts[], const int displs[],
+                         MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                         int root, MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+#undef FUNCNAME
+#define FUNCNAME MPIR_Iscatterv_inter_sched
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Iscatterv_inter_sched(const void *sendbuf, const int sendcounts[], const int displs[],
+                         MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                         int root, MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
 /* this routine handles both intracomms and intercomms */
 #undef FUNCNAME
 #define FUNCNAME MPIR_Iscatterv_sched
@@ -56,7 +139,31 @@ int MPIR_Iscatterv_sched(const void *sendbuf, const int sendcounts[], const int 
 {
     int mpi_errno = MPI_SUCCESS;
 
-    mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        switch (MPIR_Iscatterv_alg_intra_choice) {
+            case MPIR_ISCATTERV_ALG_INTRA_BINOMIAL:
+                mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+                break;
+            case MPIR_ISCATTERV_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Iscatterv_intra_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+                break;
+        }
+    } else {
+        /* intercommunicator */
+        switch (MPIR_Iscatterv_alg_inter_choice) {
+            case MPIR_ISCATTERV_ALG_INTER_BINOMIAL:
+                mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+                break;
+            case MPIR_ISCATTERV_ALG_INTER_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Iscatterv_inter_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+                break;
+        }
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
@@ -85,7 +192,7 @@ int MPIR_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs
     mpi_errno = MPIR_Sched_create(&s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
-    mpi_errno = MPID_Iscatterv_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    mpi_errno = MPIR_Iscatterv_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = MPIR_Sched_start(&s, comm_ptr, tag, &reqp);
@@ -270,7 +377,11 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
 
     /* ... body of routine ...  */
 
-    mpi_errno = MPID_Iscatterv(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, request);
+    if (MPIR_CVAR_ISCATTERV_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIVES) {
+        mpi_errno = MPID_Iscatterv(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, request);
+    } else {
+        mpi_errno = MPIR_Iscatterv(sendbuf, sendcounts, displs, sendtype, recvbuf,     recvcount, recvtype, root, comm_ptr, request);
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     /* ... end of body of routine ... */

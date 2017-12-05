@@ -7,6 +7,51 @@
 
 #include "mpiimpl.h"
 
+/*
+=== BEGIN_MPI_T_CVAR_INFO_BLOCK ===
+
+cvars:
+    - name        : MPIR_CVAR_SCATTERV_ALGORITHM_INTRA
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select scatterv algorithm
+        auto - Internal algorithm selection
+        linear - Force linear algorithm
+
+    - name        : MPIR_CVAR_SCATTERV_ALGORITHM_INTER
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select scatterv algorithm
+        auto - Internal algorithm selection
+        linear - Force linear algorithm
+
+    - name        : MPIR_CVAR_SCATTERV_DEVICE_COLLECTIVE
+      category    : COLLECTIVE
+      type        : boolean
+      default     : true
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        If set to true, MPI_Scatterv will use allow the device to override the
+        default, MPIR-level collective algorithms. The device still has the
+        option to call the MPIR-level algorithms manually.
+        If set to false, the device-level scatterv function will not be
+        called.
+
+=== END_MPI_T_CVAR_INFO_BLOCK ===
+*/
+
 /* -- Begin Profiling Symbol Block for routine MPI_Scatterv */
 #if defined(HAVE_PRAGMA_WEAK)
 #pragma weak MPI_Scatterv = PMPI_Scatterv
@@ -46,6 +91,53 @@ int MPI_Scatterv(const void *sendbuf, const int *sendcounts, const int *displs,
 */
 
 /* not declared static because it is called in intercomm. reduce_scatter */
+
+#undef FUNCNAME
+#define FUNCNAME MPIR_Scatterv_intra
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Scatterv_intra(const void *sendbuf, const int *sendcounts, const int *displs,
+                  MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                  int root, MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Scatterv_linear(sendbuf, sendcounts, displs, sendtype,
+                                recvbuf, recvcount, recvtype, root,
+                                comm_ptr, errflag);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    if (*errflag != MPIR_ERR_NONE)
+        MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+#undef FUNCNAME
+#define FUNCNAME MPIR_Scatterv_inter
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Scatterv_inter(const void *sendbuf, const int *sendcounts, const int *displs,
+                  MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                  int root, MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Scatterv_linear(sendbuf, sendcounts, displs, sendtype,
+                                recvbuf, recvcount, recvtype, root,
+                                comm_ptr, errflag);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    if (*errflag != MPIR_ERR_NONE)
+        MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
 /* MPIR_Scatterv performs an scatterv using point-to-point messages.
    This is intended to be used by device-specific implementations of
    scatterv. */
@@ -58,17 +150,44 @@ int MPIR_Scatterv(const void *sendbuf, const int *sendcounts, const int *displs,
                   int root, MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
 {
     int mpi_errno = MPI_SUCCESS;
-    int mpi_errno_ret = MPI_SUCCESS;
 
-    mpi_errno = MPIR_Scatterv_linear(sendbuf, sendcounts, displs, sendtype,
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        switch (MPIR_Scatterv_alg_intra_choice) {
+            case MPIR_SCATTERV_ALG_INTRA_LINEAR:
+                mpi_errno = MPIR_Scatterv_linear(sendbuf, sendcounts, displs, sendtype,
                                 recvbuf, recvcount, recvtype, root,
                                 comm_ptr, errflag);
+                break;
+            case MPIR_SCATTERV_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Scatterv_intra(sendbuf, sendcounts, displs, sendtype,
+                                recvbuf, recvcount, recvtype, root,
+                                comm_ptr, errflag);
+                break;
+        }
+    } else {
+        /* intercommunicator */
+        switch (MPIR_Scatterv_alg_inter_choice) {
+            case MPIR_SCATTERV_ALG_INTER_LINEAR:
+                mpi_errno = MPIR_Scatterv_linear(sendbuf, sendcounts, displs, sendtype,
+                                recvbuf, recvcount, recvtype, root,
+                                comm_ptr, errflag);
+                break;
+            case MPIR_SCATTERV_ALG_INTER_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Scatterv_inter(sendbuf, sendcounts, displs, sendtype,
+                                recvbuf, recvcount, recvtype, root,
+                                comm_ptr, errflag);
+                break;
+        }
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
     
 fn_exit:
-    if (mpi_errno_ret)
-        mpi_errno = mpi_errno_ret;
-    else if (*errflag != MPIR_ERR_NONE)
+    if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
     return mpi_errno;
 fn_fail:
@@ -251,9 +370,15 @@ int MPI_Scatterv(const void *sendbuf, const int *sendcounts, const int *displs,
 
     /* ... body of routine ...  */
 
-    mpi_errno = MPID_Scatterv(sendbuf, sendcounts, displs, sendtype,
+    if (MPIR_CVAR_SCATTERV_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIVES) {
+        mpi_errno = MPID_Scatterv(sendbuf, sendcounts, displs, sendtype,
                                    recvbuf, recvcount, recvtype,
                                    root, comm_ptr, &errflag);
+    } else {
+        mpi_errno = MPIR_Scatterv(sendbuf, sendcounts, displs, sendtype,
+                                   recvbuf, recvcount, recvtype,
+                                   root, comm_ptr, &errflag);
+    }
     if (mpi_errno) goto fn_fail;
 
     /* ... end of body of routine ... */
