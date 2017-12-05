@@ -66,16 +66,13 @@ int MPIR_Gatherv (
         MPIR_Errflag_t *errflag )
 {
     int        mpi_errno = MPI_SUCCESS;
-    int mpi_errno_ret = MPI_SUCCESS;
     
     mpi_errno = MPIR_Gatherv_linear (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 
 fn_exit:
-    if (mpi_errno_ret)
-        mpi_errno = mpi_errno_ret;
-    else if (*errflag != MPIR_ERR_NONE)
+    if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
     return mpi_errno;
 fn_fail:

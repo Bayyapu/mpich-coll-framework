@@ -58,7 +58,6 @@ int MPIR_Scatterv(const void *sendbuf, const int *sendcounts, const int *displs,
                   int root, MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
 {
     int mpi_errno = MPI_SUCCESS;
-    int mpi_errno_ret = MPI_SUCCESS;
 
     mpi_errno = MPIR_Scatterv_linear(sendbuf, sendcounts, displs, sendtype,
                                 recvbuf, recvcount, recvtype, root,
@@ -66,9 +65,7 @@ int MPIR_Scatterv(const void *sendbuf, const int *sendcounts, const int *displs,
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
     
 fn_exit:
-    if (mpi_errno_ret)
-        mpi_errno = mpi_errno_ret;
-    else if (*errflag != MPIR_ERR_NONE)
+    if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
     return mpi_errno;
 fn_fail:

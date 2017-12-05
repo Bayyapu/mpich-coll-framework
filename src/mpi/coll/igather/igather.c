@@ -111,7 +111,10 @@ int MPIR_Igather_sched(const void *sendbuf, int sendcount, MPI_Datatype sendtype
         mpi_errno = MPIR_Igather_inter_sched(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
     }
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

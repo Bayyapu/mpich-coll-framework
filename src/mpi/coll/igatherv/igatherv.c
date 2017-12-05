@@ -39,7 +39,10 @@ int MPIR_Igatherv_sched(const void *sendbuf, int sendcount, MPI_Datatype sendtyp
 
     mpi_errno = MPIR_Igatherv_default_sched(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, s);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

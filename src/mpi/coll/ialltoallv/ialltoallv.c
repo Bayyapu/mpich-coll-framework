@@ -94,7 +94,10 @@ int MPIR_Ialltoallv_sched(const void *sendbuf, const int sendcounts[], const int
         mpi_errno = MPIR_Ialltoallv_inter_sched(sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm_ptr, s);
     }
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

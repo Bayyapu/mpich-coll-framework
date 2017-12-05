@@ -59,7 +59,10 @@ int MPIR_Ibarrier_intra_sched(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
 
     mpi_errno = MPIR_Ibarrier_rec_dbl_sched(comm_ptr, s);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 /* It will choose between several different algorithms based on the given
@@ -74,7 +77,10 @@ int MPIR_Ibarrier_inter_sched(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
 
     mpi_errno = MPIR_Ibarrier_bcast_sched(comm_ptr, s);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -91,7 +97,10 @@ int MPIR_Ibarrier_sched(MPIR_Comm *comm_ptr, MPIR_Sched_t s)
         mpi_errno = MPIR_Ibarrier_inter_sched(comm_ptr, s);
     }
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

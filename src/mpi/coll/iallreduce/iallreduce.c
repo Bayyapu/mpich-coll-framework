@@ -251,7 +251,10 @@ int MPIR_Iallreduce_sched(const void *sendbuf, void *recvbuf, int count, MPI_Dat
         mpi_errno = MPIR_Iallreduce_inter_sched(sendbuf, recvbuf, count, datatype, op, comm_ptr, s);
     }
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

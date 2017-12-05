@@ -149,7 +149,10 @@ int MPIR_Ireduce_scatter_inter_sched(const void *sendbuf, void *recvbuf, const i
 
     mpi_errno = MPIR_Ireduce_scatter_default_inter_sched(sendbuf, recvbuf, recvcounts, datatype, op, comm_ptr, s);
 
+ifn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -167,7 +170,10 @@ int MPIR_Ireduce_scatter_sched(const void *sendbuf, void *recvbuf, const int rec
         mpi_errno = MPIR_Ireduce_scatter_inter_sched(sendbuf, recvbuf, recvcounts, datatype, op, comm_ptr, s);
     }
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

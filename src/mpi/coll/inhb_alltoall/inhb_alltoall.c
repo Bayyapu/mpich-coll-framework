@@ -42,7 +42,10 @@ int MPIR_Ineighbor_alltoall_sched(const void *sendbuf, int sendcount,
                                               recvbuf, recvcount, recvtype,
                                               comm_ptr, s);
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

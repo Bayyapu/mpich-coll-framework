@@ -209,7 +209,10 @@ int MPIR_Iscatter_sched(const void *sendbuf, int sendcount, MPI_Datatype sendtyp
         mpi_errno = MPIR_Iscatter_inter_sched(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
     }
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

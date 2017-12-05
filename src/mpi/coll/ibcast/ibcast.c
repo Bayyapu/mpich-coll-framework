@@ -51,7 +51,10 @@ static int sched_test_length(MPIR_Comm * comm, int tag, void *state)
                      "**collective_size_mismatch",
                   "**collective_size_mismatch %d %d", status->n_bytes, recv_size);
     }
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 /* any non-MPI functions go here, especially non-static ones */
@@ -225,7 +228,10 @@ int MPIR_Ibcast_sched(void *buffer, int count, MPI_Datatype datatype, int root, 
         mpi_errno = MPIR_Ibcast_inter_sched(buffer, count, datatype, root, comm_ptr, s);
     }
 
+fn_exit:
     return mpi_errno;
+fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME

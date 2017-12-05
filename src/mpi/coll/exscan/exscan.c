@@ -94,15 +94,12 @@ int MPIR_Exscan (
     MPIR_Errflag_t *errflag )
 {
     int mpi_errno = MPI_SUCCESS;
-    int mpi_errno_ret = MPI_SUCCESS;
     
     mpi_errno = MPIR_Exscan_recursive_doubling (sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
-    if (mpi_errno_ret)
-        mpi_errno = mpi_errno_ret;
-    else if (*errflag != MPIR_ERR_NONE)
+    if (*errflag != MPIR_ERR_NONE)
         MPIR_ERR_SET(mpi_errno, MPI_ERR_OTHER, "**coll_fail");
     return mpi_errno;
 fn_fail:
