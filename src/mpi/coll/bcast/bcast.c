@@ -630,15 +630,17 @@ int MPIR_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPIR_Co
                 mpi_errno = MPIR_Bcast_scatter_ring_allgather(buffer, count, datatype, root, comm_ptr, errflag);
                 break;
             case MPIR_BCAST_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
             default:
                 mpi_errno = MPIR_Bcast_intra( buffer, count, datatype, root, comm_ptr, errflag );
                 break;
         }
     } else {
+        /* intercommunicator */
         switch (MPIR_Bcast_alg_inter_choice) {
             case MPIR_BCAST_ALG_INTER_AUTO:
+            ATTRIBUTE((fallthrough));
             default:
-                /* intercommunicator */
                 mpi_errno = MPIR_Bcast_inter( buffer, count, datatype, root, comm_ptr, errflag );
                 break;
         }

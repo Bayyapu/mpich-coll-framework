@@ -365,14 +365,17 @@ int MPIR_Allgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
                 mpi_errno = MPIR_Allgather_ring(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm_ptr, errflag);
                 break;
             case MPIR_ALLGATHER_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
             default:
                 mpi_errno = MPIR_Allgather_intra(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm_ptr, errflag);
                 break;
         }
     } else {
+        /* intercommunicator */
         switch (MPIR_Allgather_alg_intra_choice) {
+            case MPIR_ALLGATHER_ALG_INTER_AUTO:
+            ATTRIBUTE((fallthrough));
             default:
-                /* intercommunicator */
                 mpi_errno = MPIR_Allgather_inter(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm_ptr, errflag);
                 break;
         }

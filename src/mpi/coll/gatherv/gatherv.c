@@ -7,6 +7,51 @@
 
 #include "mpiimpl.h"
 
+/*
+=== BEGIN_MPI_T_CVAR_INFO_BLOCK ===
+
+cvars:
+    - name        : MPIR_CVAR_GATHERV_ALGORITHM_INTRA
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select gatherv algorithm
+        auto - Internal algorithm selection
+        linear - Force linear algorithm
+
+    - name        : MPIR_CVAR_GATHERV_ALGORITHM_INTER
+      category    : COLLECTIVE
+      type        : string
+      default     : auto
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Variable to select gatherv algorithm
+        auto - Internal algorithm selection
+        linear - Force linear algorithm
+
+    - name        : MPIR_CVAR_GATHERV_DEVICE_COLLECTIVE
+      category    : COLLECTIVE
+      type        : boolean
+      default     : true
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        If set to true, MPI_Gatherv will use allow the device to override the
+        default, MPIR-level collective algorithms. The device still has the
+        option to call the MPIR-level algorithms manually.
+        If set to false, the device-level gatherv function will not be
+        called.
+
+=== END_MPI_T_CVAR_INFO_BLOCK ===
+*/
+
 /* -- Begin Profiling Symbol Block for routine MPI_Gatherv */
 #if defined(HAVE_PRAGMA_WEAK)
 #pragma weak MPI_Gatherv = PMPI_Gatherv
@@ -128,10 +173,28 @@ int MPIR_Gatherv (
     
     if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
         /* intracommunicator */
-        mpi_errno = MPIR_Gatherv_intra (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+        switch (MPIR_Gatherv_alg_intra_choice) {
+            case MPIR_GATHERV_ALG_INTRA_LINEAR:
+                mpi_errno = MPIR_Gatherv_linear(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+                break;
+            case MPIR_GATHERV_ALG_INTRA_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Gatherv_intra(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+                break;
+        }
     } else {
         /* intercommunicator */
-        mpi_errno = MPIR_Gatherv_inter (sendbuf, sendcount, sendtype, recvbuf, recvcount    s, displs, recvtype, root, comm_ptr, errflag);
+        switch (MPIR_Gatherv_alg_inter_choice) {
+            case MPIR_GATHERV_ALG_INTER_LINEAR:
+                mpi_errno = MPIR_Gatherv_linear(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+                break;
+            case MPIR_GATHERV_ALG_INTER_AUTO:
+            ATTRIBUTE((fallthrough));
+            default:
+                mpi_errno = MPIR_Gatherv_inter(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+                break;
+        }
     }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
@@ -317,9 +380,15 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
 
     /* ... body of routine ...  */
 
-    mpi_errno = MPID_Gatherv(sendbuf, sendcount, sendtype,
+    if (MPIR_CVAR_GATHERV_DEVICE_COLLECTIVE && MPIR_CVAR_DEVICE_COLLECTIVES) {
+        mpi_errno = MPID_Gatherv(sendbuf, sendcount, sendtype,
                                   recvbuf, recvcounts, displs, recvtype,
                                   root, comm_ptr, &errflag);
+    } else {
+        mpi_errno = MPIR_Gatherv(sendbuf, sendcount, sendtype,
+                                  recvbuf, recvcounts, displs, recvtype,
+                                  root, comm_ptr, &errflag);
+    }
     if (mpi_errno) goto fn_fail;
 
     /* ... end of body of routine ... */
