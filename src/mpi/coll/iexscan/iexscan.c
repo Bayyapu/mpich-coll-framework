@@ -28,6 +28,22 @@ int MPI_Iexscan(const void *sendbuf, void *recvbuf, int count, MPI_Datatype data
 #define MPI_Iexscan PMPI_Iexscan
 
 #undef FUNCNAME
+#define FUNCNAME MPIR_Iexscan_intra_sched
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Iexscan_intra_sched(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Iexscan_rec_dbl_sched(sendbuf, recvbuf, count, datatype, op, comm_ptr, s);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPIR_Iexscan_sched
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -35,7 +51,10 @@ int MPIR_Iexscan_sched(const void *sendbuf, void *recvbuf, int count, MPI_Dataty
 {
     int mpi_errno = MPI_SUCCESS;
 
-    mpi_errno = MPIR_Iexscan_rec_dbl_sched(sendbuf, recvbuf, count, datatype, op, comm_ptr, s);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+       mpi_errno = MPIR_Iexscan_intra_sched(sendbuf, recvbuf, count, datatype, op, comm_ptr, s);
+    }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
     return mpi_errno;

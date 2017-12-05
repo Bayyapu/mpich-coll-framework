@@ -210,6 +210,38 @@ static int scan_smp(const void *sendbuf, void *recvbuf, int count,
 }
 
 /* not declared static because a machine-specific function may call this one in some cases */
+#undef FUNCNAME
+#define FUNCNAME MPIR_Scan_intra
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Scan_intra(
+    const void *sendbuf,
+    void *recvbuf,
+    int count,
+    MPI_Datatype datatype,
+    MPI_Op op,
+    MPIR_Comm *comm_ptr,
+    MPIR_Errflag_t *errflag )
+{
+
+    /* In order to use the SMP-aware algorithm, the "op" can be
+       either commutative or non-commutative, but we require a
+       communicator in which all the nodes contain processes with
+       consecutive ranks. */
+
+    if (!MPII_Comm_is_node_consecutive(comm_ptr)) {
+        /* We can't use the SMP-aware algorithm, use the generic one */
+        return MPIR_Scan_generic(sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+    }
+
+  fn_exit:
+    if (*errflag != MPIR_ERR_NONE)
+        MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
+
+  fn_fail:
+    goto fn_exit;
+}
+
 /* MPIR_Scan performs an scan using point-to-point messages.  This is
    intended to be used by device-specific implementations of scan. */
 #undef FUNCNAME
@@ -232,10 +264,10 @@ int MPIR_Scan(
        communicator in which all the nodes contain processes with
        consecutive ranks. */
 
-    if (!MPII_Comm_is_node_consecutive(comm_ptr)) {
-        /* We can't use the SMP-aware algorithm, use the generic one */
-        return MPIR_Scan_generic(sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        mpi_errno =  MPIR_Scan_intra(sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
     }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     mpi_errno = scan_smp(sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);

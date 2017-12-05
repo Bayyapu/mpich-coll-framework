@@ -81,6 +81,32 @@ int MPI_Exscan(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datat
    is intended to be used by device-specific implementations of
    exscan. */
 #undef FUNCNAME
+#define FUNCNAME MPIR_Exscan_intra
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Exscan_intra (
+    const void *sendbuf,
+    void *recvbuf,
+    int count,
+    MPI_Datatype datatype,
+    MPI_Op op,
+    MPIR_Comm *comm_ptr,
+    MPIR_Errflag_t *errflag )
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Exscan_recursive_doubling (sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    if (*errflag != MPIR_ERR_NONE)
+        MPIR_ERR_SET(mpi_errno, MPI_ERR_OTHER, "**coll_fail");
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPIR_Exscan
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -95,7 +121,9 @@ int MPIR_Exscan (
 {
     int mpi_errno = MPI_SUCCESS;
     
-    mpi_errno = MPIR_Exscan_recursive_doubling (sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        mpi_errno = MPIR_Exscan_intra (sendbuf, recvbuf, count, datatype, op, comm_ptr, errflag);
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
