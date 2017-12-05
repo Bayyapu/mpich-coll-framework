@@ -61,7 +61,7 @@ static int handle_mprobe(const ptl_event_t *e)
     MPIR_STATUS_SET_COUNT(req->status, NPTL_HEADER_GET_LENGTH(e->hdr_data));
     MPIDI_Request_set_sync_send_flag(req, e->hdr_data & NPTL_SSEND);
 
-    MPIR_CHKPMEM_MALLOC(req->dev.tmpbuf, void *, e->mlength, mpi_errno, "tmpbuf");
+    MPIR_CHKPMEM_MALLOC(req->dev.tmpbuf, void *, e->mlength, mpi_errno, "tmpbuf", MPL_MEM_BUFFER);
     MPIR_Memcpy((char *)req->dev.tmpbuf, e->start, e->mlength);
     req->dev.recv_data_sz = e->mlength;
 
@@ -307,6 +307,7 @@ int MPID_nem_ptl_anysource_improbe(int tag, MPIR_Comm * comm, int context_offset
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
 int MPID_nem_ptl_pkt_cancel_send_req_handler(MPIDI_VC_t *vc, MPIDI_CH3_Pkt_t *pkt,
+                                             void *data ATTRIBUTE((unused)),
                                                     intptr_t *buflen, MPIR_Request **rreqp)
 {
     int ret, mpi_errno = MPI_SUCCESS;
@@ -383,6 +384,7 @@ int MPID_nem_ptl_pkt_cancel_send_req_handler(MPIDI_VC_t *vc, MPIDI_CH3_Pkt_t *pk
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
 int MPID_nem_ptl_pkt_cancel_send_resp_handler(MPIDI_VC_t *vc, MPIDI_CH3_Pkt_t *pkt,
+                                              void *data ATTRIBUTE((unused)),
                                               intptr_t *buflen, MPIR_Request **rreqp)
 {
     int mpi_errno = MPI_SUCCESS;

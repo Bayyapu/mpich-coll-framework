@@ -53,7 +53,7 @@ int MPIR_Testall_impl(int count, MPI_Request array_of_requests[], int *flag,
     if (count > MPIR_REQUEST_PTR_ARRAY_SIZE)
     {
         MPIR_CHKLMEM_MALLOC_ORJUMP(request_ptrs, MPIR_Request **,
-                count * sizeof(MPIR_Request *), mpi_errno, "request pointers");
+                count * sizeof(MPIR_Request *), mpi_errno, "request pointers", MPL_MEM_OBJECT);
     }
 
     n_completed = 0;
@@ -233,7 +233,6 @@ int MPI_Testall(int count, MPI_Request array_of_requests[], int *flag,
 		MPI_Status array_of_statuses[])
 {
     int mpi_errno = MPI_SUCCESS;
-    int i;
     MPIR_FUNC_TERSE_STATE_DECL(MPID_STATE_MPI_TESTALL);
 
     MPIR_ERRTEST_INITIALIZED_ORDIE();
@@ -246,6 +245,8 @@ int MPI_Testall(int count, MPI_Request array_of_requests[], int *flag,
     {
         MPID_BEGIN_ERROR_CHECKS;
         {
+        int i = 0;
+
 	    MPIR_ERRTEST_COUNT(count, mpi_errno);
 
 	    if (count != 0) {

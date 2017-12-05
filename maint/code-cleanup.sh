@@ -1,6 +1,6 @@
 #! /bin/bash
 
-if test ! -z "`which gindent`" ; then
+if hash gindent 2>/dev/null; then
 	indent=gindent
 else
 	indent=indent
@@ -10,10 +10,55 @@ indent_code()
 {
     file=$1
 
-    $indent --k-and-r-style --line-length100 --else-endif-column1 --start-left-side-of-comments \
-	--break-after-boolean-operator --dont-cuddle-else --dont-format-comments \
-	--comment-indentation1 --indent-level4 --no-tabs \
-	${file}
+    $indent \
+        `# Expansion of Kernighan & Ritchie style` \
+        --no-blank-lines-after-declarations \
+        `# --no-blank-lines-after-procedures` `# Overwritten below` \
+        `# --break-before-boolean-operator` `# Overwritten below` \
+        --no-blank-lines-after-commas \
+        --braces-on-if-line \
+        --braces-on-struct-decl-line \
+        `# --comment-indentation33` `# Overwritten below` \
+        --declaration-comment-column33 \
+        --no-comment-delimiters-on-blank-lines \
+        --cuddle-else \
+        --continuation-indentation4 \
+        --case-indentation0 \
+        `# --else-endif-column33` `# Overwritten below` \
+        --space-after-cast \
+        --line-comments-indentation0 \
+        --declaration-indentation1 \
+        --dont-format-first-column-comments \
+        --dont-format-comments \
+        --honour-newlines \
+        --indent-level4 \
+        --parameter-indentation0 \
+        `# --line-length75` `# Overwritten below` \
+        --continue-at-parentheses \
+        --no-space-after-function-call-names \
+        --no-space-after-parentheses \
+        --dont-break-procedure-type \
+        --space-after-for \
+        --space-after-if \
+        --space-after-while \
+        `# --dont-star-comments` `# Overwritten below` \
+        --leave-optional-blank-lines \
+        --dont-space-special-semicolon \
+        `# End of K&R expansion` \
+        --line-length100 \
+        --else-endif-column1 \
+        --start-left-side-of-comments \
+        --break-after-boolean-operator \
+        --comment-indentation1 \
+        --no-tabs \
+        --blank-lines-after-procedures \
+        --leave-optional-blank-lines \
+        --braces-after-func-def-line \
+        --brace-indent0 \
+        --cuddle-do-while \
+        --no-space-after-function-call-names \
+        ${file}
+
     rm -f ${file}~
     cp ${file} /tmp/${USER}.__tmp__ && \
 	cat ${file} | sed -e 's/ *$//g' -e 's/( */(/g' -e 's/ *)/)/g' \
@@ -38,7 +83,7 @@ recursive=0
 got_file=0
 debug=
 ignore=0
-ignore_list="__I_WILL_NEVER_FIND_YOU__"
+ignore_list="src/mpid/ch3|confdb/|doc/|src/mpl/|src/pm/hydra/|src/mpid/ch4/netmod/ofi/libfabric/|src/mpid/ch4/netmod/ucx/ucx/"
 for arg in $@; do
     if [ "$ignore" = "1" ] ; then
 	ignore_list="$ignore_list|$arg"

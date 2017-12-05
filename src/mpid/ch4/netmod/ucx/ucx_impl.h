@@ -6,8 +6,8 @@
  *  Portions of this code were written by Mellanox Technologies Ltd.
  *  Copyright (C) Mellanox Technologies Ltd. 2016. ALL RIGHTS RESERVED
  */
-#ifndef NETMOD_UCX_IMPL_H_INCLUDED
-#define NETMOD_UCX_IMPL_H_INCLUDED
+#ifndef UCX_IMPL_H_INCLUDED
+#define UCX_IMPL_H_INCLUDED
 
 #include <mpidimpl.h>
 #include "ucx_types.h"
@@ -21,6 +21,7 @@
 #define COMM_TO_INDEX(comm,rank) MPIDIU_comm_rank_to_pid(comm, rank, NULL, NULL)
 #define MPIDI_UCX_COMM_TO_EP(comm,rank) \
     MPIDI_UCX_AV(MPIDIU_comm_rank_to_av(comm, rank)).dest
+#define MPIDI_UCX_AV_TO_EP(av) MPIDI_UCX_AV((av)).dest
 
 #define MPIDI_UCX_WIN(win) ((win)->dev.netmod.ucx)
 #define MPIDI_UCX_WIN_INFO(win, rank) MPIDI_UCX_WIN(win).info_table[rank]
@@ -131,7 +132,7 @@ static inline int MPIDI_UCX_get_source(uint64_t match_bits)
 
 
 
-#define MPIDI_CH4_UCX_REQUEST(_req)				\
+#define MPIDI_UCX_CHK_REQUEST(_req)				\
   do {									\
    MPIR_ERR_CHKANDJUMP4(UCS_PTR_IS_ERR(_req),				\
 			  mpi_errno,					\
@@ -144,6 +145,4 @@ static inline int MPIDI_UCX_get_source(uint64_t match_bits)
 			  ucs_status_string(UCS_PTR_STATUS(_req)));	\
   } while (0)
 
-extern int MPIR_Datatype_init_names(void);
-
-#endif /* NETMOD_UCX_IMPL_H_INCLUDED */
+#endif /* UCX_IMPL_H_INCLUDED */

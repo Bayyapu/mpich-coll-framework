@@ -55,6 +55,7 @@ HYD_status HYDU_sock_listen(int *listen_fd, char *port_range, uint16_t * port)
         high_port = *port;
     }
 
+ setup_socket:
     *listen_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (*listen_fd < 0)
         HYDU_ERR_SETANDJUMP(status, HYD_SOCK_ERROR, "cannot open socket (%s)\n",
@@ -92,8 +93,15 @@ HYD_status HYDU_sock_listen(int *listen_fd, char *port_range, uint16_t * port)
     if (*port > high_port)
         HYDU_ERR_SETANDJUMP(status, HYD_SOCK_ERROR, "no port to bind\n");
 
-    if (listen(*listen_fd, SOMAXCONN) < 0)
-        HYDU_ERR_SETANDJUMP(status, HYD_SOCK_ERROR, "listen error (%s)\n", MPL_strerror(errno));
+    if (listen(*listen_fd, SOMAXCONN) < 0) {
+        if (errno == EADDRINUSE) {
+            /* We need to close the socket and rebind to a new port */
+            close(*listen_fd);
+            goto setup_socket;
+        } else {
+            HYDU_ERR_SETANDJUMP(status, HYD_SOCK_ERROR, "listen error (%s)\n", MPL_strerror(errno));
+        }
+    }
 
     /* We asked for any port, so we need to find out which port we
      * actually got. */
@@ -150,7 +158,7 @@ HYD_status HYDU_sock_connect(const char *host, uint16_t port, int *fd, int retri
     retry_count = 0;
     do {
         ret = connect(*fd, (struct sockaddr *) &sa, sizeof(struct sockaddr_in));
-        if (ret < 0 && errno == ECONNREFUSED) {
+        if (ret < 0 && (errno == ECONNREFUSED || errno == ETIMEDOUT)) {
             /* connection error; increase retry count and delay */
             retry_count++;
             if (retry_count > retries)
@@ -312,6 +320,28 @@ HYD_status HYDU_sock_set_nonblock(int fd)
         flags = 0;
 #if defined O_NONBLOCK
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
+        HYDU_ERR_SETANDJUMP(status, HYD_SOCK_ERROR, "fcntl failed on %d\n", fd);
+#endif /* O_NONBLOCK */
+
+  fn_exit:
+    HYDU_FUNC_EXIT();
+    return status;
+
+  fn_fail:
+    goto fn_exit;
+}
+
+HYD_status HYDU_sock_set_block(int fd)
+{
+    int flags;
+    HYD_status status = HYD_SUCCESS;
+
+    HYDU_FUNC_ENTER();
+
+    if ((flags = fcntl(fd, F_GETFL, 0)) == -1)
+        flags = 0;
+#if defined O_NONBLOCK
+    if (fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) < 0)
         HYDU_ERR_SETANDJUMP(status, HYD_SOCK_ERROR, "fcntl failed on %d\n", fd);
 #endif /* O_NONBLOCK */
 

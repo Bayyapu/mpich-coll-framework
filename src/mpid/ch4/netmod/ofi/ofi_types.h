@@ -8,8 +8,8 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef NETMOD_OFI_TYPES_H_INCLUDED
-#define NETMOD_OFI_TYPES_H_INCLUDED
+#ifndef OFI_TYPES_H_INCLUDED
+#define OFI_TYPES_H_INCLUDED
 
 #include <netdb.h>
 #include <stddef.h>
@@ -20,7 +20,6 @@
 #include "ofi_pre.h"
 #include "ch4_types.h"
 #include "mpidch4r.h"
-#include "fi_list.h"
 
 #define __SHORT_FILE__                          \
     (strrchr(__FILE__,'/')                      \
@@ -28,8 +27,6 @@
      : __FILE__                                 \
 )
 #define MPIDI_OFI_MAP_NOT_FOUND            ((void*)(-1UL))
-#define MPIDI_OFI_MAJOR_VERSION            1
-#define MPIDI_OFI_MINOR_VERSION            0
 #define MPIDI_OFI_DEFAULT_SHORT_SEND_SIZE  (16 * 1024)
 #define MPIDI_OFI_NUM_AM_BUFFERS           (8)
 #define MPIDI_OFI_AM_BUFF_SZ               (1 * 1024 * 1024)
@@ -38,87 +35,32 @@
 #define MPIDI_OFI_BUF_POOL_SIZE            (1024)
 #define MPIDI_OFI_BUF_POOL_NUM             (1024)
 #define MPIDI_OFI_NUM_CQ_BUFFERED          (1024)
-#define MPIDI_OFI_MAX_AM_HANDLERS_TOTAL    (100)
-#define MPIDI_OFI_INTERNAL_HANDLER_CONTROL (MPIDI_OFI_MAX_AM_HANDLERS_TOTAL-1)
-#define MPIDI_OFI_INTERNAL_HANDLER_NEXT    (MPIDI_OFI_MAX_AM_HANDLERS_TOTAL-2)
-#define MPIDI_OFI_MAX_AM_HANDLERS          (MPIDI_OFI_INTERNAL_HANDLER_NEXT-1)
+#define MPIDI_OFI_INTERNAL_HANDLER_CONTROL (MPIDI_AM_HANDLERS_MAX-1)
+#define MPIDI_OFI_INTERNAL_HANDLER_NEXT    (MPIDI_AM_HANDLERS_MAX-2)
 
-#ifdef USE_OFI_TAGGED
-#define MPIDI_OFI_ENABLE_TAGGED          1
-#define MPIDI_OFI_ENABLE_AM              1
-#define MPIDI_OFI_ENABLE_RMA             1
+#define MPIDI_OFI_PROTOCOL_BITS (3)
+
+#if MPIDI_OFI_ENABLE_RUNTIME_CHECKS == MPIDI_OFI_ON
+#define MPIDI_OFI_SYNC_SEND          (1ULL << (MPIDI_OFI_CONTEXT_BITS + MPIDI_OFI_SOURCE_BITS + MPIDI_OFI_TAG_BITS))
+#define MPIDI_OFI_SYNC_SEND_ACK      (2ULL << (MPIDI_OFI_CONTEXT_BITS + MPIDI_OFI_SOURCE_BITS + MPIDI_OFI_TAG_BITS))
+#define MPIDI_OFI_DYNPROC_SEND       (4ULL << (MPIDI_OFI_CONTEXT_BITS + MPIDI_OFI_SOURCE_BITS + MPIDI_OFI_TAG_BITS))
+#define MPIDI_OFI_PROTOCOL_MASK      (((1ULL << MPIDI_OFI_PROTOCOL_BITS) - 1) << (MPIDI_OFI_CONTEXT_BITS + MPIDI_OFI_SOURCE_BITS + MPIDI_OFI_TAG_BITS))
+#define MPIDI_OFI_CONTEXT_MASK       (((1ULL << MPIDI_OFI_CONTEXT_BITS) - 1) << (MPIDI_OFI_SOURCE_BITS + MPIDI_OFI_TAG_BITS))
+#define MPIDI_OFI_SOURCE_MASK        (((1ULL << MPIDI_OFI_SOURCE_BITS) - 1) << MPIDI_OFI_TAG_BITS)
+#define MPIDI_OFI_TAG_MASK           ((1ULL << MPIDI_OFI_TAG_BITS) - 1)
+/* This value comes from the fact that we use a uint32_t in
+ * MPIDI_OFI_send_handler to define the dest and that is the size we expect
+ * from the OFI provider for its immediate data field. */
+#define MPIDI_OFI_MAX_RANK_BITS      (MPIDI_OFI_SOURCE_BITS > 0 ? MPIDI_OFI_SOURCE_BITS : 32)
 #else
-#define MPIDI_OFI_ENABLE_TAGGED          0
-#define MPIDI_OFI_ENABLE_AM              1
-#define MPIDI_OFI_ENABLE_RMA             1
+#if MPIDI_OFI_SOURCE_BITS == 0
+/* This value comes from the fact that we use a uint32_t in
+ * MPIDI_OFI_send_handler to define the dest and that is the size we expect
+ * from the OFI provider for its immediate data field. */
+#define MPIDI_OFI_MAX_RANK_BITS      32
+#else
+#define MPIDI_OFI_MAX_RANK_BITS      MPIDI_OFI_SOURCE_BITS
 #endif
-
-#ifdef MPIDI_OFI_CONFIG_USE_SCALABLE_ENDPOINTS
-#define MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS 1
-#else
-#define MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS 0
-#endif
-
-#ifdef MPIDI_OFI_CONFIG_USE_AV_TABLE
-#define MPIDI_OFI_ENABLE_AV_TABLE 1
-#else
-#define MPIDI_OFI_ENABLE_AV_TABLE 0
-#endif
-
-#ifdef USE_OFI_IMMEDIATE_DATA
-#define MPIDI_OFI_ENABLE_DATA FI_REMOTE_CQ_DATA
-#else
-#define MPIDI_OFI_ENABLE_DATA 0
-#endif
-
-#ifdef USE_OFI_STX_RMA
-#define MPIDI_OFI_ENABLE_STX_RMA 1
-#else
-#define MPIDI_OFI_ENABLE_STX_RMA 0
-#endif
-
-#ifdef USE_OFI_MR_SCALABLE
-#define MPIDI_OFI_ENABLE_MR_SCALABLE 1
-#else
-#define MPIDI_OFI_ENABLE_MR_SCALABLE 0
-#endif
-
-#ifdef USE_OFI_IMMEDIATE_DATA
-/* match/ignore bit manipulation
- *
- * 0123 4567 01234567 01234567 01234567 01234567 01234567 01234567 01234567
- *     |             |                 |
- * ^   |   Unused    |    context id   |           message tag
- * |   |             |                 |
- * +---- protocol
- */
-#define MPIDI_OFI_PROTOCOL_MASK (0x9000000000000000ULL)
-#define MPIDI_OFI_CONTEXT_MASK  (0x00007FFF80000000ULL)
-#define MPIDI_OFI_SOURCE_MASK   (0x0000000000000000ULL)
-#define MPIDI_OFI_TAG_MASK      (0x000000007FFFFFFFULL)
-#define MPIDI_OFI_SYNC_SEND     (0x1000000000000000ULL)
-#define MPIDI_OFI_SYNC_SEND_ACK (0x2000000000000000ULL)
-#define MPIDI_OFI_DYNPROC_SEND  (0x4000000000000000ULL)
-#define MPIDI_OFI_TAG_SHIFT     (31)
-#define MPIDI_OFI_SOURCE_SHIFT  (0)
-#else
-/* match/ignore bit manipulation
- *
- * 0123 4567 01234567 0123 4567 01234567 0123 4567 01234567 01234567 01234567
- *     |                  |                  |
- * ^   |    context id    |       source     |       message tag
- * |   |                  |                  |
- * +---- protocol
- */
-#define MPIDI_OFI_PROTOCOL_MASK (0x9000000000000000ULL)
-#define MPIDI_OFI_CONTEXT_MASK  (0x0FFFF00000000000ULL)
-#define MPIDI_OFI_SOURCE_MASK   (0x00000FFFF0000000ULL)
-#define MPIDI_OFI_TAG_MASK      (0x000000000FFFFFFFULL)
-#define MPIDI_OFI_SYNC_SEND     (0x1000000000000000ULL)
-#define MPIDI_OFI_SYNC_SEND_ACK (0x2000000000000000ULL)
-#define MPIDI_OFI_DYNPROC_SEND  (0x4000000000000000ULL)
-#define MPIDI_OFI_TAG_SHIFT     (28)
-#define MPIDI_OFI_SOURCE_SHIFT  (16)
 #endif
 
 /* RMA Key Space division
@@ -170,47 +112,55 @@
 #endif
 #define MPIDI_OFI_OP_SIZES 15
 
-#define MPIDI_OFI_API_TAG 0
-#define MPIDI_OFI_API_RMA 1
-#define MPIDI_OFI_API_MSG 2
-#define MPIDI_OFI_API_CTR 3
-
 #define MPIDI_OFI_THREAD_UTIL_MUTEX     MPIDI_Global.mutexes[0].m
 #define MPIDI_OFI_THREAD_PROGRESS_MUTEX MPIDI_Global.mutexes[1].m
 #define MPIDI_OFI_THREAD_FI_MUTEX       MPIDI_Global.mutexes[2].m
 #define MPIDI_OFI_THREAD_SPAWN_MUTEX    MPIDI_Global.mutexes[3].m
 
 /* Field accessor macros */
-#define MPIDI_OFI_GPID(gpid)               ((gpid)->dev.netmod.ofi)
 #define MPIDI_OFI_OBJECT_HEADER_SIZE       offsetof(MPIDI_OFI_offset_checker_t,  pad)
-#define MPIDI_OFI_AMREQUEST(req,field)     ((req)->dev.ch4.ch4u.netmod_am.ofi.field)
-#define MPIDI_OFI_AMREQUEST_HDR(req,field) ((req)->dev.ch4.ch4u.netmod_am.ofi.req_hdr->field)
-#define MPIDI_OFI_AMREQUEST_HDR_PTR(req)   ((req)->dev.ch4.ch4u.netmod_am.ofi.req_hdr)
+#define MPIDI_OFI_AMREQUEST(req,field)     ((req)->dev.ch4.am.netmod_am.ofi.field)
+#define MPIDI_OFI_AMREQUEST_HDR(req,field) ((req)->dev.ch4.am.netmod_am.ofi.req_hdr->field)
+#define MPIDI_OFI_AMREQUEST_HDR_PTR(req)   ((req)->dev.ch4.am.netmod_am.ofi.req_hdr)
 #define MPIDI_OFI_REQUEST(req,field)       ((req)->dev.ch4.netmod.ofi.field)
 #define MPIDI_OFI_AV(av)                   ((av)->netmod.ofi)
 
 #define MPIDI_OFI_DATATYPE(dt)   ((dt)->dev.netmod.ofi)
 #define MPIDI_OFI_COMM(comm)     ((comm)->dev.ch4.netmod.ofi)
 
-#ifdef MPIDI_OFI_CONFIG_USE_SCALABLE_ENDPOINTS
-#define MPIDI_OFI_COMM_TO_EP(comm,rank)  MPIDI_OFI_AV(MPIDIU_comm_rank_to_av(comm, rank)).ep_idx
-#define MPIDI_OFI_EP_TX_TAG(x) MPIDI_Global.ctx[x].tx_tag
-#define MPIDI_OFI_EP_TX_RMA(x) MPIDI_Global.ctx[x].tx_rma
-#define MPIDI_OFI_EP_TX_MSG(x) MPIDI_Global.ctx[x].tx_msg
-#define MPIDI_OFI_EP_TX_CTR(x) MPIDI_Global.ctx[x].tx_ctr
-#define MPIDI_OFI_EP_RX_TAG(x) MPIDI_Global.ctx[x].rx_tag
-#define MPIDI_OFI_EP_RX_RMA(x) MPIDI_Global.ctx[x].rx_rma
-#define MPIDI_OFI_EP_RX_MSG(x) MPIDI_Global.ctx[x].rx_msg
+/* Convert the address vector entry to an endpoint index.
+ * This conversion depends on the data structure which could change based on
+ * whether we're using scalable endpoints or not. */
+static inline int MPIDI_OFI_av_to_ep(MPIDI_OFI_addr_t *av)
+{
+#if MPIDI_OFI_ENABLE_RUNTIME_CHECKS
+    return (av)->ep_idx;
+#else /* This is necessary for older GCC compilers that don't properly do this
+       * detection when using elif */
+#if MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS
+    return (av)->ep_idx;
 #else
-#define MPIDI_OFI_COMM_TO_EP(comm,rank) 0
-#define MPIDI_OFI_EP_TX_TAG(x) MPIDI_Global.ep
-#define MPIDI_OFI_EP_TX_RMA(x) MPIDI_Global.ep
-#define MPIDI_OFI_EP_TX_MSG(x) MPIDI_Global.ep
-#define MPIDI_OFI_EP_TX_CTR(x) MPIDI_Global.ep
-#define MPIDI_OFI_EP_RX_TAG(x) MPIDI_Global.ep
-#define MPIDI_OFI_EP_RX_RMA(x) MPIDI_Global.ep
-#define MPIDI_OFI_EP_RX_MSG(x) MPIDI_Global.ep
+    return 0;
 #endif
+#endif
+}
+
+/* Convert a communicator and rank to an endpoint index.
+ * This conversion depends on the data structure which could change based on
+ * whether we're using scalable endpoints or not. */
+static inline int MPIDI_OFI_comm_to_ep(MPIR_Comm *comm_ptr, int rank)
+{
+#if MPIDI_OFI_ENABLE_RUNTIME_CHECKS
+    return MPIDI_OFI_AV(MPIDIU_comm_rank_to_av(comm_ptr, rank)).ep_idx;
+#else /* This is necessary for older GCC compilers that don't properly do this
+       * detection when using elif */
+#if MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS
+    return MPIDI_OFI_AV(MPIDIU_comm_rank_to_av(comm_ptr, rank)).ep_idx;
+#else
+    return 0;
+#endif
+#endif
+}
 
 #define MPIDI_OFI_DO_SEND        0
 #define MPIDI_OFI_DO_INJECT      1
@@ -231,8 +181,7 @@ enum {
     MPIDI_OFI_CTRL_COMPLETE,  /**< End a START epoch     */
     MPIDI_OFI_CTRL_POST,      /**< Begin POST epoch      */
     MPIDI_OFI_CTRL_HUGE,      /**< Huge message          */
-    MPIDI_OFI_CTRL_HUGEACK,   /**< Huge message ack      */
-    MPIDI_OFI_CTRL_HUGE_CLEANUP
+    MPIDI_OFI_CTRL_HUGEACK    /**< Huge message ack      */
     /**< Huge message cleanup  */
 };
 
@@ -247,7 +196,11 @@ enum {
     MPIDI_OFI_EVENT_AM_MULTI,
     MPIDI_OFI_EVENT_PEEK,
     MPIDI_OFI_EVENT_RECV_HUGE,
+    MPIDI_OFI_EVENT_RECV_PACK,
+    MPIDI_OFI_EVENT_RECV_NOPACK,
     MPIDI_OFI_EVENT_SEND_HUGE,
+    MPIDI_OFI_EVENT_SEND_PACK,
+    MPIDI_OFI_EVENT_SEND_NOPACK,
     MPIDI_OFI_EVENT_SSEND_ACK,
     MPIDI_OFI_EVENT_GET_HUGE,
     MPIDI_OFI_EVENT_CHUNK_DONE,
@@ -267,23 +220,31 @@ enum {
     MPIDI_OFI_PEEK_FOUND
 };
 
+enum {
+    MPIDI_OFI_DYNPROC_DISCONNECTED = 0,
+    MPIDI_OFI_DYNPROC_LOCAL_DISCONNECTED_CHILD,
+    MPIDI_OFI_DYNPROC_LOCAL_DISCONNECTED_PARENT,
+    MPIDI_OFI_DYNPROC_CONNECTED_CHILD,
+    MPIDI_OFI_DYNPROC_CONNECTED_PARENT
+};
+
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context;  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     int index;
 } MPIDI_OFI_am_repost_request_t;
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context;  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     MPIR_Request *signal_req;
 } MPIDI_OFI_ssendack_request_t;
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context;  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     int done;
     uint32_t tag;
@@ -304,34 +265,68 @@ typedef struct {
 } MPIDI_OFI_atomic_valid_t;
 
 typedef struct {
-    struct fid_ep *tx_tag;
-    struct fid_ep *rx_tag;
-
-    struct fid_ep *tx_rma;
-    struct fid_ep *rx_rma;
-
-    struct fid_ep *tx_msg;
-    struct fid_ep *rx_msg;
-
-    struct fid_ep *tx_ctr;
-
-    int ctx_offset;
+    struct fid_ep *tx;
+    struct fid_ep *rx;
+    struct fid_cq *cq;
 } MPIDI_OFI_context_t;
 
 typedef union {
     MPID_Thread_mutex_t m;
     char cacheline[MPIDI_OFI_CACHELINE_SIZE];
-} MPIDI_OFI_cacheline_mutex_t __attribute__ ((aligned(MPIDI_OFI_CACHELINE_SIZE)));
+} MPIDI_OFI_cacheline_mutex_t MPL_ATTR_ALIGNED(MPIDI_OFI_CACHELINE_SIZE);
 
-typedef struct {
+typedef struct MPIDI_OFI_cq_list_t {
     struct fi_cq_tagged_entry cq_entry;
     fi_addr_t source;
-    struct slist_entry entry;
+    struct MPIDI_OFI_cq_list_t *next;
 } MPIDI_OFI_cq_list_t;
 
 typedef struct {
     struct fi_cq_tagged_entry cq_entry;
 } MPIDI_OFI_cq_buff_entry_t;
+
+typedef struct {
+    unsigned enable_data:1;
+    unsigned enable_av_table:1;
+    unsigned enable_scalable_endpoints:1;
+    unsigned enable_stx_rma:1;
+    unsigned enable_mr_scalable:1;
+    unsigned enable_tagged:1;
+    unsigned enable_am:1;
+    unsigned enable_rma:1;
+    unsigned enable_atomics:1;
+    unsigned enable_pt2pt_nopack:1;
+    unsigned enable_data_auto_progress:1;
+    unsigned enable_control_auto_progress:1;
+
+    int max_endpoints;
+    int max_endpoints_bits;
+
+    int fetch_atomic_iovecs;
+
+    int context_bits;
+    int source_bits;
+    int tag_bits;
+    int major_version;
+    int minor_version;
+} MPIDI_OFI_capabilities_t;
+
+typedef struct {
+    fi_addr_t dest;
+    int rank;
+    int state;
+} MPIDI_OFI_conn_t;
+
+typedef struct MPIDI_OFI_conn_manager_t {
+    int mmapped_size;            /* Size of the connection list memory which is mmapped */
+    int max_n_conn;              /* Maximum number of connections up to this point */
+    int n_conn;                  /* Current number of open connections */
+    int next_conn_id;            /* The next connection id to be used. */
+    int *free_conn_id;           /* The list of the next connection id to be used so we
+                                    can garbage collect as we go. */
+    MPIDI_OFI_conn_t *conn_list; /* The list of connection structs to track the
+                                    outstanding dynamic process connections. */
+} MPIDI_OFI_conn_manager_t;
 
 /* Global state data */
 #define MPIDI_KVSAPPSTRLEN 1024
@@ -356,15 +351,21 @@ typedef struct {
     uint64_t max_mr_key_size;
     int max_windows_bits;
     int max_huge_rma_bits;
-    int max_huge_rmas;
+    uint64_t max_huge_rmas;
     int huge_rma_shift;
     int context_shift;
-    size_t iov_limit;
+    size_t tx_iov_limit;
+    size_t rx_iov_limit;
     size_t rma_iov_limit;
+    int max_ch4_vnis;
 
     /* Mutexex and endpoints */
     MPIDI_OFI_cacheline_mutex_t mutexes[4];
+#ifdef MPIDI_OFI_ENABLE_RUNTIME_CHECKS
+    MPIDI_OFI_context_t ctx[MPIDI_OFI_MAX_ENDPOINTS_SCALABLE];
+#else
     MPIDI_OFI_context_t ctx[MPIDI_OFI_MAX_ENDPOINTS];
+#endif
 
     /* Window/RMA Globals */
     void *win_map;
@@ -372,44 +373,44 @@ typedef struct {
     MPIDI_OFI_atomic_valid_t win_op_table[MPIDI_OFI_DT_SIZES][MPIDI_OFI_OP_SIZES];
 
     /* Active Message Globals */
-    struct iovec am_iov[MPIDI_OFI_NUM_AM_BUFFERS];
+    struct iovec am_iov[MPIDI_OFI_NUM_AM_BUFFERS] MPL_ATTR_ALIGNED(MPIDI_OFI_IOVEC_ALIGN);
     struct fi_msg am_msg[MPIDI_OFI_NUM_AM_BUFFERS];
     void *am_bufs[MPIDI_OFI_NUM_AM_BUFFERS];
     MPIDI_OFI_am_repost_request_t am_reqs[MPIDI_OFI_NUM_AM_BUFFERS];
-    MPIDI_NM_am_target_handler_fn am_handlers[MPIDI_OFI_MAX_AM_HANDLERS_TOTAL];
-    MPIDI_NM_am_origin_handler_fn am_isend_cmpl_handlers[MPIDI_OFI_MAX_AM_HANDLERS_TOTAL];
     MPIU_buf_pool_t *am_buf_pool;
     OPA_int_t am_inflight_inject_emus;
     OPA_int_t am_inflight_rma_send_mrs;
 
     /* Completion queue buffering */
-    MPIDI_OFI_cq_buff_entry_t cq_buffered[MPIDI_OFI_NUM_CQ_BUFFERED];
-    struct slist cq_buff_list;
-    int cq_buff_head;
-    int cq_buff_tail;
+    MPIDI_OFI_cq_buff_entry_t cq_buffered_static_list[MPIDI_OFI_NUM_CQ_BUFFERED];
+    int cq_buffered_static_head;
+    int cq_buffered_static_tail;
+    MPIDI_OFI_cq_list_t *cq_buffered_dynamic_head, *cq_buffered_dynamic_tail;
 
     /* Process management and PMI globals */
     int pname_set;
     int pname_len;
-    int jobid;
     char addrname[FI_NAME_MAX];
     size_t addrnamelen;
     char kvsname[MPIDI_KVSAPPSTRLEN];
     char pname[MPI_MAX_PROCESSOR_NAME];
     int port_name_tag_mask[MPIR_MAX_CONTEXT_MASK];
+
+    /* Communication info for dynamic processes */
+    MPIDI_OFI_conn_manager_t conn_mgr;
+
+    /* complete request used for lightweight sends */
+    MPIR_Request *lw_send_req;
+
+    /* Capability settings */
+#ifdef MPIDI_OFI_ENABLE_RUNTIME_CHECKS
+    MPIDI_OFI_capabilities_t settings;
+#endif
 } MPIDI_OFI_global_t;
 
 typedef struct {
     uint32_t index;
 } MPIDI_OFI_datatype_t;
-/* These control structures have to be the same size */
-typedef struct {
-    int16_t type;
-    int16_t lock_type;
-    int origin_rank;
-    uint64_t win_id;
-    int dummy[8];
-} MPIDI_OFI_win_control_t;
 
 typedef struct {
     int16_t type;
@@ -421,6 +422,7 @@ typedef struct {
     int comm_id;
     int endpoint_id;
     uint64_t rma_key;
+    int tag;
 } MPIDI_OFI_send_control_t;
 
 typedef struct {
@@ -465,7 +467,7 @@ typedef struct {
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context;  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     struct MPIDI_Iovec_array *next;
     union {
@@ -503,7 +505,7 @@ typedef struct {
 typedef struct MPIDI_OFI_win_request {
     MPIR_OBJECT_HEADER;
     char pad[MPIDI_REQUEST_HDR_SIZE - MPIDI_OFI_OBJECT_HEADER_SIZE];
-    struct fi_context context;  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     struct MPIDI_OFI_win_request *next;
     int target_rank;
@@ -512,31 +514,45 @@ typedef struct MPIDI_OFI_win_request {
 
 typedef struct {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context;  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
     MPIR_Request *parent;       /* Parent request           */
 } MPIDI_OFI_chunk_request;
 
-typedef struct {
+typedef struct MPIDI_OFI_huge_recv {
     char pad[MPIDI_REQUEST_HDR_SIZE];
-    struct fi_context context;  /* fixed field, do not move */
+    struct fi_context context[MPIDI_OFI_CONTEXT_STRUCTS];  /* fixed field, do not move */
     int event_id;               /* fixed field, do not move */
-    int (*done_fn) (struct fi_cq_tagged_entry * wc, MPIR_Request * req);
+    int (*done_fn) (struct fi_cq_tagged_entry * wc, MPIR_Request * req, int event_id);
     MPIDI_OFI_send_control_t remote_info;
     size_t cur_offset;
     MPIR_Comm *comm_ptr;
     MPIR_Request *localreq;
     struct fi_cq_tagged_entry wc;
+    struct MPIDI_OFI_huge_recv *next; /* Points to the next entry in the unexpected list
+                                         * (when in the unexpected list) */
 } MPIDI_OFI_huge_recv_t;
 
-typedef struct MPIDI_OFI_huge_counter_t {
-    uint16_t counter;
-    uint16_t outstanding;
-    struct fid_mr *mr;
-} MPIDI_OFI_huge_counter_t;
+/* The list of posted huge receives that haven't been matched yet. These need
+ * to get matched up when handling the control message that starts transfering
+ * data from the remote memory region and we need a way of matching up the
+ * control messages with the "real" requests. */
+typedef struct MPIDI_OFI_huge_recv_list {
+    int comm_id;
+    int rank;
+    int tag;
+    MPIR_Request *rreq;
+    struct MPIDI_OFI_huge_recv_list *next;
+} MPIDI_OFI_huge_recv_list_t;
 
 /* Externs */
 extern MPIDI_OFI_global_t MPIDI_Global;
-extern int MPIR_Datatype_init_names(void);
+extern MPIDI_OFI_huge_recv_t *MPIDI_unexp_huge_recv_head;
+extern MPIDI_OFI_huge_recv_t *MPIDI_unexp_huge_recv_tail;
+extern MPIDI_OFI_huge_recv_list_t *MPIDI_posted_huge_recv_head;
+extern MPIDI_OFI_huge_recv_list_t *MPIDI_posted_huge_recv_tail;
 
-#endif /* NETMOD_OFI_IMPL_H_INCLUDED */
+extern int MPIR_Datatype_init_names(void);
+extern MPIDI_OFI_capabilities_t MPIDI_OFI_caps_list[MPIDI_OFI_NUM_SETS];
+
+#endif /* OFI_TYPES_H_INCLUDED */

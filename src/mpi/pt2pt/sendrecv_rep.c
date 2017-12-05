@@ -113,10 +113,10 @@ int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype,
 	    {
 		MPIR_Datatype *datatype_ptr = NULL;
 
-		MPID_Datatype_get_ptr(datatype, datatype_ptr);
+		MPIR_Datatype_get_ptr(datatype, datatype_ptr);
 		MPIR_Datatype_valid_ptr(datatype_ptr, mpi_errno);
 		if (mpi_errno) goto fn_fail;
-		MPID_Datatype_committed_ptr(datatype_ptr, mpi_errno);
+		MPIR_Datatype_committed_ptr(datatype_ptr, mpi_errno);
 		if (mpi_errno) goto fn_fail;
 	    }
 	    
@@ -147,7 +147,7 @@ int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype,
 	{
 	    MPIR_Pack_size_impl(count, datatype, &tmpbuf_size);
 
-	    MPIR_CHKLMEM_MALLOC_ORJUMP(tmpbuf, void *, tmpbuf_size, mpi_errno, "temporary send buffer");
+	    MPIR_CHKLMEM_MALLOC_ORJUMP(tmpbuf, void *, tmpbuf_size, mpi_errno, "temporary send buffer", MPL_MEM_BUFFER);
 
 	    mpi_errno = MPIR_Pack_impl(buf, count, datatype, tmpbuf, tmpbuf_size, &tmpbuf_count);
 	    if (mpi_errno != MPI_SUCCESS) goto fn_fail;

@@ -8,8 +8,8 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef NETMOD_STUBNM_RECV_H_INCLUDED
-#define NETMOD_STUBNM_RECV_H_INCLUDED
+#ifndef STUBNM_RECV_H_INCLUDED
+#define STUBNM_RECV_H_INCLUDED
 
 #include "stubnm_impl.h"
 
@@ -19,7 +19,9 @@ static inline int MPIDI_NM_mpi_recv(void *buf,
                                     int rank,
                                     int tag,
                                     MPIR_Comm * comm,
-                                    int context_offset, MPI_Status * status,
+                                    int context_offset,
+                                    MPIDI_av_entry_t *addr,
+                                    MPI_Status * status,
                                     MPIR_Request ** request)
 {
     int err = MPI_SUCCESS;
@@ -33,6 +35,7 @@ static inline int MPIDI_NM_mpi_recv_init(void *buf,
                                          int rank,
                                          int tag,
                                          MPIR_Comm * comm, int context_offset,
+                                         MPIDI_av_entry_t *addr,
                                          MPIR_Request ** request)
 {
     MPIR_Assert(0);
@@ -53,7 +56,9 @@ static inline int MPIDI_NM_mpi_irecv(void *buf,
                                      MPI_Datatype datatype,
                                      int rank,
                                      int tag,
-                                     MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
+                                     MPIR_Comm * comm, int context_offset,
+                                     MPIDI_av_entry_t *addr,
+                                     MPIR_Request ** request)
 {
     int err = MPI_SUCCESS;
     MPIR_Assert(0);
@@ -66,4 +71,4 @@ static inline int MPIDI_NM_mpi_cancel_recv(MPIR_Request * rreq)
     return MPI_SUCCESS;
 }
 
-#endif /* NETMOD_STUBNM_RECV_H_INCLUDED */
+#endif /* STUBNM_RECV_H_INCLUDED */

@@ -56,4 +56,11 @@ noinst_PROGRAMS =  \
     big_count_status	\
     many_isend     \
     manylmt        \
-    dtype_send
+    huge_underflow \
+    huge_anysrc    \
+    dtype_send		 \
+    recv_any		\
+    irecv_any
+
+irecv_any_CPPFLAGS = -DTEST_NB $(AM_CPPFLAGS)
+irecv_any_SOURCES  = recv_any.c

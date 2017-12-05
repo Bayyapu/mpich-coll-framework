@@ -8,8 +8,8 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef SHM_POSIX_IMPL_H_INCLUDED
-#define SHM_POSIX_IMPL_H_INCLUDED
+#ifndef POSIX_IMPL_H_INCLUDED
+#define POSIX_IMPL_H_INCLUDED
 
 #include <mpidimpl.h>
 #include "mpidch4r.h"
@@ -65,7 +65,7 @@ typedef struct {
     MPIR_cc_decr((req_)->cc_ptr, &incomplete__); \
     dtype_release_if_not_builtin(MPIDI_POSIX_REQUEST(req_)->datatype); \
     if (!incomplete__) \
-        MPIDI_CH4U_request_release(req_);    \
+        MPIR_Request_free(req_);    \
 }
 
 #define MPIDI_POSIX_REQUEST_ENQUEUE(req,queue) \
@@ -171,4 +171,4 @@ extern MPIDI_POSIX_request_queue_t MPIDI_POSIX_recvq_posted;
 
 
 
-#endif /* SHM_POSIX_IMPL_H_INCLUDED */
+#endif /* POSIX_IMPL_H_INCLUDED */

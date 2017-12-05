@@ -6,8 +6,8 @@
  *  Portions of this code were written by Mellanox Technologies Ltd.
  *  Copyright (C) Mellanox Technologies Ltd. 2016. ALL RIGHTS RESERVED
  */
-#ifndef NETMOD_UCX_SPAWN_H_INCLUDED
-#define NETMOD_UCX_SPAWN_H_INCLUDED
+#ifndef UCX_SPAWN_H_INCLUDED
+#define UCX_SPAWN_H_INCLUDED
 
 #include "ucx_impl.h"
 
@@ -45,7 +45,8 @@ static inline int MPIDI_NM_mpi_close_port(const char *port_name)
 #define FCNAME MPL_QUOTE(FUNCNAME)
 static inline int MPIDI_NM_mpi_comm_connect(const char *port_name,
                                             MPIR_Info * info,
-                                            int root, MPIR_Comm * comm_ptr, MPIR_Comm ** newcomm)
+                                            int root, int timeout,
+                                            MPIR_Comm * comm_ptr, MPIR_Comm ** newcomm)
 {
     int mpi_errno = MPI_SUCCESS;
 
@@ -100,4 +101,4 @@ static inline int MPIDI_NM_mpi_comm_accept(const char *port_name,
     goto fn_exit;
 }
 
-#endif /* NETMOD_UCX_SPAWN_H_INCLUDED */
+#endif /* UCX_SPAWN_H_INCLUDED */

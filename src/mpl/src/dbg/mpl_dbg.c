@@ -268,8 +268,8 @@ void MPL_dbg_class_register(MPL_dbg_class class, const char *ucname, const char 
 
         for (i = 0; i < num_unregistered_classes; i++) {
             size_t slen = strlen(unregistered_classes[i]);
-            if (len == slen && (strncmp(unregistered_classes[i], lcname, len) ||
-                                strncmp(unregistered_classes[i], ucname, len))) {
+            if (len == slen && (!strncmp(unregistered_classes[i], lcname, len) ||
+                                !strncmp(unregistered_classes[i], ucname, len))) {
                 /* got a match */
                 MPL_dbg_active_classes |= class;
                 for (j = i; j < num_unregistered_classes - 1; j++)
@@ -388,7 +388,7 @@ static int dbg_process_args(int *argc_p, char ***argv_p)
  * could! consider MPICH: we moved all our logging code into MPL, so it should
  * have an MPL_ prefix, but all the documentation assumes an "MPICH_" prefix.
  * So we'll look for both. */
-static char *getenv_either(char *env_a, char *env_b)
+static char *getenv_either(const char *env_a, const char *env_b)
 {
     char *s;
     if ( (s = getenv(env_a)) == NULL)
@@ -924,8 +924,8 @@ static int dbg_set_class(const char *s)
         for (i = 0; i < num_classnames; i++) {
             size_t len = strlen(classnames[i].lcname);
 
-            if (slen == len && (strncmp(str, classnames[i].lcname, len) ||
-                                strncmp(str, classnames[i].ucname, len))) {
+            if (slen == len && (!strncmp(str, classnames[i].lcname, len) ||
+                                !strncmp(str, classnames[i].ucname, len))) {
                 /* we have a match */
                 MPL_dbg_active_classes |= classnames[i].classbits;
                 found_match = 1;

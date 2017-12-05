@@ -8,8 +8,8 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef NETMOD_STUBNM_WIN_H_INCLUDED
-#define NETMOD_STUBNM_WIN_H_INCLUDED
+#ifndef STUBNM_WIN_H_INCLUDED
+#define STUBNM_WIN_H_INCLUDED
 
 #include "stubnm_impl.h"
 
@@ -47,13 +47,14 @@ static inline int MPIDI_NM_mpi_win_test(MPIR_Win * win, int *flag)
     return MPIDI_CH4R_mpi_win_test(win, flag);
 }
 
-static inline int MPIDI_NM_mpi_win_lock(int lock_type, int rank, int assert, MPIR_Win * win)
+static inline int MPIDI_NM_mpi_win_lock(int lock_type, int rank, int assert,
+                                        MPIR_Win * win, MPIDI_av_entry_t *addr)
 {
     return MPIDI_CH4R_mpi_win_lock(lock_type, rank, assert, win);
 }
 
 
-static inline int MPIDI_NM_mpi_win_unlock(int rank, MPIR_Win * win)
+static inline int MPIDI_NM_mpi_win_unlock(int rank, MPIR_Win * win, MPIDI_av_entry_t *addr)
 {
     return MPIDI_CH4R_mpi_win_unlock(rank, win);
 }
@@ -118,7 +119,7 @@ static inline int MPIDI_NM_mpi_win_allocate(MPI_Aint size,
     return MPIDI_CH4R_mpi_win_allocate(size, disp_unit, info, comm, baseptr, win);
 }
 
-static inline int MPIDI_NM_mpi_win_flush(int rank, MPIR_Win * win)
+static inline int MPIDI_NM_mpi_win_flush(int rank, MPIR_Win * win, MPIDI_av_entry_t *addr)
 {
     return MPIDI_CH4R_mpi_win_flush(rank, win);
 }
@@ -139,7 +140,8 @@ static inline int MPIDI_NM_mpi_win_create_dynamic(MPIR_Info * info, MPIR_Comm * 
     return MPIDI_CH4R_mpi_win_create_dynamic(info, comm, win);
 }
 
-static inline int MPIDI_NM_mpi_win_flush_local(int rank, MPIR_Win * win)
+static inline int MPIDI_NM_mpi_win_flush_local(int rank, MPIR_Win * win,
+                                               MPIDI_av_entry_t *addr)
 {
     return MPIDI_CH4R_mpi_win_flush_local(rank, win);
 }
@@ -160,4 +162,4 @@ static inline int MPIDI_NM_mpi_win_lock_all(int assert, MPIR_Win * win)
 }
 
 
-#endif /* NETMOD_STUBNM_WIN_H_INCLUDED */
+#endif /* STUBNM_WIN_H_INCLUDED */

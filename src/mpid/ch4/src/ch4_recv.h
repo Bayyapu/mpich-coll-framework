@@ -14,10 +14,10 @@
 #include "ch4_impl.h"
 
 #undef FUNCNAME
-#define FUNCNAME MPIDI_Recv
+#define FUNCNAME MPID_Recv
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-MPL_STATIC_INLINE_PREFIX int MPIDI_Recv(void *buf,
+MPL_STATIC_INLINE_PREFIX int MPID_Recv(void *buf,
                                         int count,
                                         MPI_Datatype datatype,
                                         int rank,
@@ -27,8 +27,9 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv(void *buf,
                                         MPIR_Request ** request)
 {
     int mpi_errno;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4_RECV);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4_RECV);
+    MPIDI_av_entry_t *av = NULL;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_RECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_RECV);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
         MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__RECV);
@@ -41,9 +42,10 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv(void *buf,
         goto fn_exit;
     }
 
+    av = MPIDIU_comm_rank_to_av(comm, rank);
 #ifndef MPIDI_CH4_EXCLUSIVE_SHM
     mpi_errno =
-        MPIDI_NM_mpi_recv(buf, count, datatype, rank, tag, comm, context_offset, status, request);
+        MPIDI_NM_mpi_recv(buf, count, datatype, rank, tag, comm, context_offset, av, status, request);
 #else
     if (unlikely(rank == MPI_ANY_SOURCE)) {
         mpi_errno =
@@ -53,7 +55,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv(void *buf,
             MPIR_ERR_POP(mpi_errno);
         }
 
-        mpi_errno = MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset,
+        mpi_errno = MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset, av,
                                        &(MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(*request)));
 
         if (mpi_errno != MPI_SUCCESS) {
@@ -78,13 +80,13 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv(void *buf,
     }
     else {
         int r;
-        if ((r = MPIDI_CH4_rank_is_local(rank, comm)))
+        if ((r = MPIDI_av_is_local(av)))
             mpi_errno =
                 MPIDI_SHM_mpi_recv(buf, count, datatype, rank, tag, comm, context_offset, status,
                                    request);
         else
             mpi_errno =
-                MPIDI_NM_mpi_recv(buf, count, datatype, rank, tag, comm, context_offset, status,
+                MPIDI_NM_mpi_recv(buf, count, datatype, rank, tag, comm, context_offset, av, status,
                                   request);
         if (mpi_errno == MPI_SUCCESS && *request) {
             MPIDI_CH4I_REQUEST(*request, is_local) = r;
@@ -97,17 +99,17 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv(void *buf,
         MPIR_ERR_POP(mpi_errno);
     }
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_RECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPID_RECV);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
 }
 
 #undef FUNCNAME
-#define FUNCNAME MPIDI_Recv_init
+#define FUNCNAME MPID_Recv_init
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-MPL_STATIC_INLINE_PREFIX int MPIDI_Recv_init(void *buf,
+MPL_STATIC_INLINE_PREFIX int MPID_Recv_init(void *buf,
                                              int count,
                                              MPI_Datatype datatype,
                                              int rank,
@@ -116,13 +118,14 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv_init(void *buf,
                                              MPIR_Request ** request)
 {
     int mpi_errno;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4_RECV_INIT);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4_RECV_INIT);
+    MPIDI_av_entry_t *av = NULL;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_RECV_INIT);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_RECV_INIT);
+
+    av = MPIDIU_comm_rank_to_av(comm, rank);
 #ifndef MPIDI_CH4_EXCLUSIVE_SHM
     mpi_errno =
-        MPIDI_NM_mpi_recv_init(buf, count, datatype, rank, tag, comm, context_offset, request);
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_RECV_INIT);
-    return mpi_errno;
+        MPIDI_NM_mpi_recv_init(buf, count, datatype, rank, tag, comm, context_offset, av, request);
 #else
     if (unlikely(rank == MPI_ANY_SOURCE)) {
         mpi_errno =
@@ -132,7 +135,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv_init(void *buf,
             MPIR_ERR_POP(mpi_errno);
         }
 
-        mpi_errno = MPIDI_NM_mpi_recv_init(buf, count, datatype, rank, tag, comm, context_offset,
+        mpi_errno = MPIDI_NM_mpi_recv_init(buf, count, datatype, rank, tag, comm, context_offset, av,
                                            &(MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(*request)));
 
         if (mpi_errno != MPI_SUCCESS) {
@@ -147,39 +150,42 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Recv_init(void *buf,
     }
     else {
         int r;
-        if ((r = MPIDI_CH4_rank_is_local(rank, comm)))
+        if ((r = MPIDI_av_is_local(av)))
             mpi_errno = MPIDI_SHM_mpi_recv_init(buf, count, datatype, rank, tag,
                                                 comm, context_offset, request);
         else
             mpi_errno = MPIDI_NM_mpi_recv_init(buf, count, datatype, rank, tag,
-                                               comm, context_offset, request);
+                                               comm, context_offset, av, request);
         if (mpi_errno == MPI_SUCCESS) {
             MPIDI_CH4I_REQUEST(*request, is_local) = r;
             MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(*request) = NULL;
         }
     }
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_RECV_INIT);
-    return mpi_errno;
-  fn_fail:
-    goto fn_exit;
 #endif
 
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPID_RECV_INIT);
+    return mpi_errno;
+
+#ifdef MPIDI_CH4_EXCLUSIVE_SHM
+  fn_fail:
+    goto fn_exit;
+#endif /* MPIDI_CH4_EXCLUSIVE_SHM */
 }
 
 
 #undef FUNCNAME
-#define FUNCNAME MPIDI_Mrecv
+#define FUNCNAME MPID_Mrecv
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-MPL_STATIC_INLINE_PREFIX int MPIDI_Mrecv(void *buf,
+MPL_STATIC_INLINE_PREFIX int MPID_Mrecv(void *buf,
                                          int count,
                                          MPI_Datatype datatype, MPIR_Request * message,
                                          MPI_Status * status)
 {
     int mpi_errno;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4_MRECV);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4_MRECV);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_MRECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_MRECV);
 
     MPI_Request req_handle;
     int active_flag;
@@ -192,132 +198,72 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Mrecv(void *buf,
         goto fn_exit;
     }
 
-    if (unlikely(message->status.MPI_SOURCE == MPI_PROC_NULL)) {
-        rreq = message;
-        rreq->status.MPI_SOURCE = message->status.MPI_SOURCE;
-        rreq->status.MPI_TAG = message->status.MPI_TAG;
-        MPIDI_CH4U_request_complete(rreq);
-        mpi_errno = MPI_SUCCESS;
-        goto fn_exit;
-    }
-
 #ifndef MPIDI_CH4_EXCLUSIVE_SHM
     mpi_errno = MPIDI_NM_mpi_imrecv(buf, count, datatype, message, &rreq);
 #else
-
-    if (unlikely(message->status.MPI_SOURCE == MPI_ANY_SOURCE)) {
+    if (MPIDI_CH4I_REQUEST(message, is_local))
         mpi_errno = MPIDI_SHM_mpi_imrecv(buf, count, datatype, message, &rreq);
-
-        if (mpi_errno != MPI_SUCCESS) {
-            MPIR_ERR_POP(mpi_errno);
-        }
-
-        mpi_errno =
-            MPIDI_NM_mpi_imrecv(buf, count, datatype, message,
-                                &(MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(rreq)));
-
-        if (mpi_errno != MPI_SUCCESS) {
-            MPIR_ERR_POP(mpi_errno);
-        }
-
-        MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(rreq)) = rreq;
-        MPIDI_CH4I_REQUEST(rreq, is_local) = 1;
-        MPIDI_CH4I_REQUEST(MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(rreq), is_local) = 0;
-    }
-    else {
-        int local = MPIDI_CH4_rank_is_local(message->status.MPI_SOURCE, message->comm);
-        if (local)
-            mpi_errno = MPIDI_SHM_mpi_imrecv(buf, count, datatype, message, &rreq);
-        else
-            mpi_errno = MPIDI_NM_mpi_imrecv(buf, count, datatype, message, &rreq);
-
-        if (mpi_errno == MPI_SUCCESS) {
-            MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(rreq) = NULL;
-            MPIDI_CH4I_REQUEST(rreq, is_local) = local;
-        }
-    }
+    else
+        mpi_errno = MPIDI_NM_mpi_imrecv(buf, count, datatype, message, &rreq);
 #endif
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
     while (!MPIR_Request_is_complete(rreq)) {
-        MPIDI_NM_progress(MPIDI_CH4_Global.netmod_context[0], 0);
-#ifdef MPIDI_CH4_EXCLUSIVE_SHM
-        MPIDI_SHM_progress(0);
-#endif
+        MPID_Progress_test();
     }
 
     /* This should probably be moved to MPICH (above device) level */
     /* Someone neglected to put the blocking at the MPICH level    */
-    MPIR_Request_extract_status(rreq, status);
-    MPIR_Request_complete(&req_handle, rreq, status, &active_flag);
+    mpi_errno = MPIR_Request_complete(&req_handle, rreq, status, &active_flag);
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_MRECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPID_MRECV);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
 }
 
 #undef FUNCNAME
-#define FUNCNAME MPIDI_Imrecv
+#define FUNCNAME MPID_Imrecv
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-MPL_STATIC_INLINE_PREFIX int MPIDI_Imrecv(void *buf,
+MPL_STATIC_INLINE_PREFIX int MPID_Imrecv(void *buf,
                                           int count,
                                           MPI_Datatype datatype,
                                           MPIR_Request * message, MPIR_Request ** rreqp)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4_IMRECV);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4_IMRECV);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_IMRECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_IMRECV);
 
     if (message == NULL) {
-        MPIR_Request *rreq;
-        MPIDI_Request_create_null_rreq(rreq, mpi_errno, goto fn_fail);
-        *rreqp = rreq;
-        goto fn_exit;
-    }
-
-    if (unlikely(message->status.MPI_SOURCE == MPI_PROC_NULL)) {
-        MPIR_Request *rreq = message;
-        rreq->status.MPI_SOURCE = message->status.MPI_SOURCE;
-        rreq->status.MPI_TAG = message->status.MPI_TAG;
-        MPIDI_CH4U_request_complete(rreq);
-        *rreqp = rreq;
-        mpi_errno = MPI_SUCCESS;
+        MPIDI_Request_create_null_rreq(*rreqp, mpi_errno, goto fn_fail);
         goto fn_exit;
     }
 
 #ifndef MPIDI_CH4_EXCLUSIVE_SHM
     mpi_errno = MPIDI_NM_mpi_imrecv(buf, count, datatype, message, rreqp);
 #else
-    {
-        int local = MPIDI_CH4_rank_is_local(message->status.MPI_SOURCE, message->comm);
-        if (local)
-            mpi_errno = MPIDI_SHM_mpi_imrecv(buf, count, datatype, message, rreqp);
-        else
-            mpi_errno = MPIDI_NM_mpi_imrecv(buf, count, datatype, message, rreqp);
-        if (mpi_errno == MPI_SUCCESS) {
-            MPIDI_CH4I_REQUEST(*rreqp, is_local) = local;
-            MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(*rreqp) = NULL;
-        }
-    }
+    if (MPIDI_CH4I_REQUEST(message, is_local))
+        mpi_errno = MPIDI_SHM_mpi_imrecv(buf, count, datatype, message, rreqp);
+    else
+        mpi_errno = MPIDI_NM_mpi_imrecv(buf, count, datatype, message, rreqp);
 #endif
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_IMRECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPID_IMRECV);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
 }
 
 #undef FUNCNAME
-#define FUNCNAME MPIDI_Irecv
+#define FUNCNAME MPID_Irecv
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-MPL_STATIC_INLINE_PREFIX int MPIDI_Irecv(void *buf,
+MPL_STATIC_INLINE_PREFIX int MPID_Irecv(void *buf,
                                          int count,
                                          MPI_Datatype datatype,
                                          int rank,
@@ -326,8 +272,9 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Irecv(void *buf,
                                          MPIR_Request ** request)
 {
     int mpi_errno;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4_IRECV);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4_IRECV);
+    MPIDI_av_entry_t *av = NULL;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_IRECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_IRECV);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
         MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__RECV);
@@ -340,8 +287,9 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Irecv(void *buf,
         goto fn_exit;
     }
 
+    av = MPIDIU_comm_rank_to_av(comm, rank);
 #ifndef MPIDI_CH4_EXCLUSIVE_SHM
-    mpi_errno = MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset, request);
+    mpi_errno = MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset, av, request);
 #else
     if (unlikely(rank == MPI_ANY_SOURCE)) {
         mpi_errno =
@@ -351,7 +299,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Irecv(void *buf,
             MPIR_ERR_POP(mpi_errno);
         }
 
-        mpi_errno = MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset,
+        mpi_errno = MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset, av,
                                        &(MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(*request)));
 
         if (mpi_errno != MPI_SUCCESS) {
@@ -367,12 +315,12 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Irecv(void *buf,
     }
     else {
         int r;
-        if ((r = MPIDI_CH4_rank_is_local(rank, comm)))
+        if ((r = MPIDI_av_is_local(av)))
             mpi_errno =
                 MPIDI_SHM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset, request);
         else
             mpi_errno =
-                MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset, request);
+                MPIDI_NM_mpi_irecv(buf, count, datatype, rank, tag, comm, context_offset, av, request);
         if (mpi_errno == MPI_SUCCESS && *request) {
             MPIDI_CH4I_REQUEST(*request, is_local) = r;
             MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(*request) = NULL;
@@ -383,7 +331,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Irecv(void *buf,
         MPIR_ERR_POP(mpi_errno);
     }
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_IRECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPID_IRECV);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -393,11 +341,11 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Irecv(void *buf,
 #define FUNCNAME MPIDI_Cancel_Recv
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-MPL_STATIC_INLINE_PREFIX int MPIDI_Cancel_recv(MPIR_Request * rreq)
+MPL_STATIC_INLINE_PREFIX int MPID_Cancel_recv(MPIR_Request * rreq)
 {
     int mpi_errno;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4_CANCEL_RECV);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4_CANCEL_RECV);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_CANCEL_RECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_CANCEL_RECV);
 #ifndef MPIDI_CH4_EXCLUSIVE_SHM
     mpi_errno = MPIDI_NM_mpi_cancel_recv(rreq);
 #else
@@ -410,7 +358,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_Cancel_recv(MPIR_Request * rreq)
         MPIR_ERR_POP(mpi_errno);
     }
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_CANCEL_RECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPID_CANCEL_RECV);
     return mpi_errno;
   fn_fail:
     goto fn_exit;

@@ -6,17 +6,13 @@
  *  Portions of this code were written by Mellanox Technologies Ltd.
  *  Copyright (C) Mellanox Technologies Ltd. 2016. ALL RIGHTS RESERVED
  */
-#ifndef NETMOD_UCX_PRE_H_INCLUDED
-#define NETMOD_UCX_PRE_H_INCLUDED
+#ifndef UCX_PRE_H_INCLUDED
+#define UCX_PRE_H_INCLUDED
 
 #include <ucp/api/ucp.h>
 
-#define HAVE_MPIDI_NM_type_create_hook
-#define HAVE_MPIDI_NM_type_free_hook
-
 #define MPIDI_UCX_KVSAPPSTRLEN 4096
 
-//#define MPIDI_UCX_NAME_LEN             (512)
 typedef struct {
     void *req;
 } MPIDI_UCX_ucp_request_t;
@@ -57,10 +53,6 @@ typedef struct {
 } MPIDI_UCX_win_t;
 
 typedef struct {
-    char addr[MPIDI_UCX_KVSAPPSTRLEN];
-} MPIDI_UCX_gpid_t;
-
-typedef struct {
     ucp_ep_h dest;
 } MPIDI_UCX_addr_t;
 
@@ -72,4 +64,4 @@ typedef struct {
     int dummy;
 } MPIDI_UCX_op_t;
 
-#endif /* NETMOD_UCX_PRE_H_INCLUDED */
+#endif /* UCX_PRE_H_INCLUDED */
