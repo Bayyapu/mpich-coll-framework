@@ -30,21 +30,70 @@
 #include <stdint.h>
 #endif /* HAVE_STDINT_H */
 
+/*
+=== BEGIN_MPI_T_CVAR_INFO_BLOCK ===
+
+cvars:
+    - name        : MPIR_CVAR_CH4_RANDOM_ADDR_RETRY
+      category    : CH4
+      type        : int
+      default     : 100
+      class       : none
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_GROUP
+      description : >-
+        The default number of retries for generating a random address. A retrying
+        involves only local operations.
+
+    - name        : MPIR_CVAR_CH4_SYMHEAP_RETRY
+      category    : CH4
+      type        : int
+      default     : 100
+      class       : none
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_GROUP
+      description : >-
+        The default number of retries for allocating a symmetric heap in a process
+        group. A retrying involves collective communication over the group.
+
+    - name        : MPIR_CVAR_CH4_SHM_SYMHEAP_RETRY
+      category    : CH4
+      type        : int
+      default     : 100
+      class       : none
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_GROUP
+      description : >-
+        The default number of retries for allocating a symmetric heap in shared
+        memory. A retrying involves collective communication over the group in
+        the shared memory.
+=== END_MPI_T_CVAR_INFO_BLOCK ===
+*/
+
 #undef FUNCNAME
 #define FUNCNAME MPIDI_CH4R_get_mapsize
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
 static inline size_t MPIDI_CH4R_get_mapsize(size_t size, size_t * psz)
 {
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4R_GET_MAPSIZE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4R_GET_MAPSIZE);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_GET_MAPSIZE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_GET_MAPSIZE);
 
     long page_sz = sysconf(_SC_PAGESIZE);
     size_t mapsize = (size + (page_sz - 1)) & (~(page_sz - 1));
     *psz = page_sz;
 
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4R_GET_MAPSIZE);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_GET_MAPSIZE);
     return mapsize;
+}
+
+#undef FUNCNAME
+#define FUNCNAME MPIDI_CH4R_is_valid_mapaddr
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+static inline int MPIDI_CH4R_is_valid_mapaddr(void *start)
+{
+    return ((uintptr_t) start == -1ULL) ? 0 : 1;
 }
 
 #undef FUNCNAME
@@ -60,23 +109,25 @@ static inline int MPIDI_CH4R_check_maprange_ok(void *start, size_t size)
     size_t i, num_pages = mapsize / page_sz;
     char *ptr = (char *) start;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4R_CHECK_MAPRANGE_OK);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4R_CHECK_MAPRANGE_OK);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_CHECK_MAPRANGE_OK);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_CHECK_MAPRANGE_OK);
 
     for (i = 0; i < num_pages; i++) {
         rc = msync(ptr, page_sz, 0);
 
         if (rc == -1) {
-            MPIR_Assert(errno == ENOMEM);
+            if (errno != ENOMEM)
+                goto fn_fail;
             ptr += page_sz;
         }
         else
             goto fn_exit;
     }
 
+  fn_fail:
     ret = 1;
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4R_CHECK_MAPRANGE_OK);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_CHECK_MAPRANGE_OK);
     return ret;
 }
 
@@ -98,13 +149,13 @@ static inline void *MPIDI_CH4R_generate_random_addr(size_t size)
     uint64_t random_unsigned;
     size_t mapsize = MPIDI_CH4R_get_mapsize(size, &page_sz);
     struct timeval ts;
-    int iter = 100;
+    int iter = MPIR_CVAR_CH4_RANDOM_ADDR_RETRY;
     int32_t rh, rl;
     struct random_data rbuf;
 #endif
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4R_GENERATE_RANDOM_ADDR);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4R_GENERATE_RANDOM_ADDR);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_GENERATE_RANDOM_ADDR);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_GENERATE_RANDOM_ADDR);
 
 #ifndef USE_SYM_HEAP
     map_pointer = -1ULL;
@@ -139,7 +190,7 @@ static inline void *MPIDI_CH4R_generate_random_addr(size_t size)
 #endif
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4R_GENERATE_RANDOM_ADDR);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_GENERATE_RANDOM_ADDR);
     return (void *) map_pointer;
 }
 
@@ -151,17 +202,17 @@ static inline int MPIDI_CH4R_get_symmetric_heap(MPI_Aint size,
                                                 MPIR_Comm * comm, void **base, MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
-    int iter = 100;
-    void *baseP;
-    size_t mapsize;
+    int iter = MPIR_CVAR_CH4_SYMHEAP_RETRY;
+    void *baseP = NULL;
+    size_t mapsize = 0;
 #ifdef USE_SYM_HEAP
     unsigned test, result;
     MPIR_Errflag_t errflag = MPIR_ERR_NONE;
     size_t page_sz;
 #endif
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4R_GET_SYMMETRIC_HEAP);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4R_GET_SYMMETRIC_HEAP);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_GET_SYMMETRIC_HEAP);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_GET_SYMMETRIC_HEAP);
 
 #ifndef USE_SYM_HEAP
     iter = 0;
@@ -176,8 +227,8 @@ static inline int MPIDI_CH4R_get_symmetric_heap(MPI_Aint size,
 
     maxloc.sz = size;
     maxloc.loc = comm->rank;
-    mpi_errno = MPIR_Allreduce_impl(&maxloc,
-                                    &maxloc_result, 1, MPI_LONG_INT, MPI_MAXLOC, comm, &errflag);
+    mpi_errno = MPID_Allreduce(&maxloc,
+                               &maxloc_result, 1, MPI_LONG_INT, MPI_MAXLOC, comm, &errflag);
 
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
@@ -192,13 +243,12 @@ static inline int MPIDI_CH4R_get_symmetric_heap(MPI_Aint size,
 
             if (comm->rank == maxloc_result.loc) {
                 map_pointer = (uintptr_t) MPIDI_CH4R_generate_random_addr(mapsize);
-                baseP = mmap((void *) map_pointer,
-                             mapsize,
-                             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_FIXED, -1, 0);
+                baseP = MPL_mmap((void *) map_pointer, mapsize,
+                                 PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_FIXED, -1, 0, MPL_MEM_RMA);
             }
 
-            mpi_errno = MPIR_Bcast_impl(&map_pointer,
-                                        1, MPI_UNSIGNED_LONG, maxloc_result.loc, comm, &errflag);
+            mpi_errno = MPID_Bcast(&map_pointer,
+                                   1, MPI_UNSIGNED_LONG, maxloc_result.loc, comm, &errflag);
 
             if (mpi_errno != MPI_SUCCESS)
                 goto fn_fail;
@@ -207,9 +257,8 @@ static inline int MPIDI_CH4R_get_symmetric_heap(MPI_Aint size,
                 int rc = MPIDI_CH4R_check_maprange_ok((void *) map_pointer, mapsize);
 
                 if (rc) {
-                    baseP = mmap((void *) map_pointer,
-                                 mapsize,
-                                 PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_FIXED, -1, 0);
+                    baseP = MPL_mmap((void *) map_pointer, mapsize,
+                                     PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_FIXED, -1, 0, MPL_MEM_RMA);
                 }
                 else
                     baseP = (void *) -1ULL;
@@ -219,14 +268,14 @@ static inline int MPIDI_CH4R_get_symmetric_heap(MPI_Aint size,
                 baseP = (void *) map_pointer;
 
             test = ((uintptr_t) baseP != -1ULL) ? 1 : 0;
-            mpi_errno = MPIR_Allreduce_impl(&test,
-                                            &result, 1, MPI_UNSIGNED, MPI_BAND, comm, &errflag);
+            mpi_errno = MPID_Allreduce(&test,
+                                       &result, 1, MPI_UNSIGNED, MPI_BAND, comm, &errflag);
 
             if (mpi_errno != MPI_SUCCESS)
                 goto fn_fail;
 
             if (result == 0 && baseP != (void *) -1ULL)
-                munmap(baseP, mapsize);
+                MPL_munmap(baseP, mapsize, MPL_MEM_RMA);
         }
     }
     else
@@ -236,7 +285,7 @@ static inline int MPIDI_CH4R_get_symmetric_heap(MPI_Aint size,
     if (iter == 0) {
         MPL_DBG_MSG(MPIDI_CH4_DBG_GENERAL, VERBOSE,
                     "WARNING: Win_allocate:  Unable to allocate symmetric heap\n");
-        baseP = MPL_malloc(size);
+        baseP = MPL_malloc(size, MPL_MEM_RMA);
         MPIR_ERR_CHKANDJUMP((baseP == NULL), mpi_errno, MPI_ERR_BUFFER, "**bufnull");
         MPIDI_CH4U_WIN(win, mmap_sz) = -1ULL;
         MPIDI_CH4U_WIN(win, mmap_addr) = NULL;
@@ -249,7 +298,7 @@ static inline int MPIDI_CH4R_get_symmetric_heap(MPI_Aint size,
     *base = baseP;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4R_GET_SYMMETRIC_HEAP);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_GET_SYMMETRIC_HEAP);
     return mpi_errno;
   fn_fail:
     goto fn_exit;

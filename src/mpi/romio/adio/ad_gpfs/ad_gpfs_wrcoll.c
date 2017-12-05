@@ -18,7 +18,7 @@
 #include "ad_gpfs_aggrs.h"
 
 #ifdef BGQPLATFORM
-#include <mpix.h>
+#include "bg/ad_bg_pset.h"
 #endif
 
 #ifdef AGGREGATION_PROFILE
@@ -583,7 +583,7 @@ static int gpfs_find_access_for_ion(ADIO_File fd,
 	ADIO_Offset *fd_start, ADIO_Offset *fd_end,
 	ADIO_Offset *start, ADIO_Offset *end)
 {
-    int my_ionode = MPIX_IO_node_id();
+    int my_ionode = BGQ_IO_node_id();
     int *rank_to_ionode;
     int i, nprocs, rank;
     ADIO_Offset group_start=LLONG_MAX, group_end=0;
@@ -912,7 +912,7 @@ static void ADIOI_Exch_and_write(ADIO_File fd, const void *buf, MPI_Datatype
 
 	if (flag) {
 	    char round[50];
-	    sprintf(round, "two-phase-round=%d", m);
+	    MPL_snprintf(round, sizeof(round), "two-phase-round=%d", m);
 	    setenv("LIBIOLOG_EXTRA_INFO", round, 1);
       ADIOI_Assert(size == (int)size);
 	    if (gpfsmpio_pthreadio == 1) {

@@ -8,8 +8,8 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef SHM_POSIX_RECV_H_INCLUDED
-#define SHM_POSIX_RECV_H_INCLUDED
+#ifndef POSIX_RECV_H_INCLUDED
+#define POSIX_RECV_H_INCLUDED
 
 #include "posix_impl.h"
 #include "ch4_impl.h"
@@ -38,9 +38,9 @@ static inline int MPIDI_POSIX_do_irecv(void *buf,
     MPI_Aint dt_true_lb;
     MPIR_Datatype *dt_ptr;
     MPIR_Request *rreq = NULL;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_SHM_DO_IRECV);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_DO_IRECV);
 
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_SHM_DO_IRECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_DO_IRECV);
 
     MPIDI_POSIX_REQUEST_CREATE_RREQ(rreq);
 
@@ -52,7 +52,7 @@ static inline int MPIDI_POSIX_do_irecv(void *buf,
 
     MPIDI_Datatype_get_info(count, datatype, dt_contig, data_sz, dt_ptr, dt_true_lb);
     MPIDI_POSIX_ENVELOPE_SET(MPIDI_POSIX_REQUEST(rreq), rank, tag,
-                             comm->context_id + context_offset);
+                             comm->recvcontext_id + context_offset);
     rreq->comm = comm;
     MPIR_Comm_add_ref(comm);
     MPIDI_POSIX_REQUEST(rreq)->user_buf = (char *) buf + dt_true_lb;
@@ -65,10 +65,10 @@ static inline int MPIDI_POSIX_do_irecv(void *buf,
     MPIR_STATUS_SET_COUNT(rreq->status, 0);
 
     if (!dt_contig) {
-        MPIDI_POSIX_REQUEST(rreq)->segment_ptr = MPID_Segment_alloc();
+        MPIDI_POSIX_REQUEST(rreq)->segment_ptr = MPIR_Segment_alloc();
         MPIR_ERR_CHKANDJUMP1((MPIDI_POSIX_REQUEST(rreq)->segment_ptr == NULL), mpi_errno,
-                             MPI_ERR_OTHER, "**nomem", "**nomem %s", "MPID_Segment_alloc");
-        MPID_Segment_init((char *) buf, MPIDI_POSIX_REQUEST(rreq)->user_count,
+                             MPI_ERR_OTHER, "**nomem", "**nomem %s", "MPIR_Segment_alloc");
+        MPIR_Segment_init((char *) buf, MPIDI_POSIX_REQUEST(rreq)->user_count,
                           MPIDI_POSIX_REQUEST(rreq)->datatype,
                           MPIDI_POSIX_REQUEST(rreq)->segment_ptr, 0);
         MPIDI_POSIX_REQUEST(rreq)->segment_first = 0;
@@ -82,19 +82,19 @@ static inline int MPIDI_POSIX_do_irecv(void *buf,
                     (MPL_DBG_FDEST,
                      "Enqueued from grank %d to %d (comm_kind %d) in recv %d,%d,%d\n",
                      MPIDI_CH4U_rank_to_lpid(rank, comm), MPIDI_POSIX_mem_region.rank,
-                     comm->comm_kind, rank, tag, comm->context_id + context_offset));
+                     (int) comm->comm_kind, rank, tag, comm->recvcontext_id + context_offset));
     *request = rreq;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_SHM_DO_IRECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_DO_IRECV);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
 }
 
 #undef FCNAME
-#define FCNAME DECL_FUNC(MPIDI_SHM_mpi_recv)
-static inline int MPIDI_SHM_mpi_recv(void *buf,
+#define FCNAME DECL_FUNC(MPIDI_POSIX_mpi_recv)
+static inline int MPIDI_POSIX_mpi_recv(void *buf,
                                      int count,
                                      MPI_Datatype datatype,
                                      int rank,
@@ -105,22 +105,22 @@ static inline int MPIDI_SHM_mpi_recv(void *buf,
 {
     int mpi_errno = MPI_SUCCESS, dt_contig __attribute__ ((__unused__));
     size_t data_sz __attribute__ ((__unused__));
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPIDI_SHM_RECV);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_MPI_RECV);
 
-    MPIR_FUNC_VERBOSE_ENTER(MPIDI_SHM_RECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_RECV);
 
     /* create a request */
     MPID_THREAD_CS_ENTER(POBJ, MPIDI_POSIX_SHM_MUTEX);
     mpi_errno =
         MPIDI_POSIX_do_irecv(buf, count, datatype, rank, tag, comm, context_offset, request);
     MPID_THREAD_CS_EXIT(POBJ, MPIDI_POSIX_SHM_MUTEX);
-    MPIR_FUNC_VERBOSE_EXIT(MPIDI_SHM_RECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_RECV);
     return mpi_errno;
 }
 
 #undef FCNAME
-#define FCNAME DECL_FUNC(MPIDI_SHM_mpi_recv)
-static inline int MPIDI_SHM_mpi_recv_init(void *buf,
+#define FCNAME DECL_FUNC(MPIDI_POSIX_mpi_recv)
+static inline int MPIDI_POSIX_mpi_recv_init(void *buf,
                                           int count,
                                           MPI_Datatype datatype,
                                           int rank,
@@ -130,9 +130,9 @@ static inline int MPIDI_SHM_mpi_recv_init(void *buf,
 {
     int mpi_errno = MPI_SUCCESS;
     MPIR_Request *rreq = NULL;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_SHM_RECV_INIT);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_MPI_RECV_INIT);
 
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_SHM_RECV_INIT);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_RECV_INIT);
 
     MPIDI_POSIX_REQUEST_CREATE_RREQ(rreq);
     MPIR_Object_set_ref(rreq, 1);
@@ -141,18 +141,18 @@ static inline int MPIDI_SHM_mpi_recv_init(void *buf,
     rreq->comm = comm;
     MPIR_Comm_add_ref(comm);
     MPIDI_POSIX_ENVELOPE_SET(MPIDI_POSIX_REQUEST(rreq), rank, tag,
-                             comm->context_id + context_offset);
+                             comm->recvcontext_id + context_offset);
     MPIDI_POSIX_REQUEST(rreq)->user_buf = (char *) buf;
     MPIDI_POSIX_REQUEST(rreq)->user_count = count;
     MPIDI_POSIX_REQUEST(rreq)->datatype = datatype;
     *request = rreq;
 
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_SHM_RECV_INIT);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_RECV_INIT);
     return mpi_errno;
 }
 
 
-static inline int MPIDI_SHM_mpi_imrecv(void *buf,
+static inline int MPIDI_POSIX_mpi_imrecv(void *buf,
                                        int count,
                                        MPI_Datatype datatype,
                                        MPIR_Request * message, MPIR_Request ** rreqp)
@@ -165,8 +165,8 @@ static inline int MPIDI_SHM_mpi_imrecv(void *buf,
     MPIR_Request *rreq = NULL, *sreq = NULL;
     int rank, tag, context_id;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPIDI_SHM_IMRECV);
-    MPIR_FUNC_VERBOSE_ENTER(MPIDI_SHM_IMRECV);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_MPI_IMRECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_IMRECV);
     MPID_THREAD_CS_ENTER(POBJ, MPIDI_POSIX_SHM_MUTEX);
 
     if (message == NULL) {
@@ -193,10 +193,10 @@ static inline int MPIDI_SHM_mpi_imrecv(void *buf,
     MPIR_STATUS_SET_COUNT(rreq->status, 0);
 
     if (!dt_contig) {
-        MPIDI_POSIX_REQUEST(rreq)->segment_ptr = MPID_Segment_alloc();
+        MPIDI_POSIX_REQUEST(rreq)->segment_ptr = MPIR_Segment_alloc();
         MPIR_ERR_CHKANDJUMP1((MPIDI_POSIX_REQUEST(rreq)->segment_ptr == NULL), mpi_errno,
-                             MPI_ERR_OTHER, "**nomem", "**nomem %s", "MPID_Segment_alloc");
-        MPID_Segment_init((char *) buf, MPIDI_POSIX_REQUEST(rreq)->user_count,
+                             MPI_ERR_OTHER, "**nomem", "**nomem %s", "MPIR_Segment_alloc");
+        MPIR_Segment_init((char *) buf, MPIDI_POSIX_REQUEST(rreq)->user_count,
                           MPIDI_POSIX_REQUEST(rreq)->datatype,
                           MPIDI_POSIX_REQUEST(rreq)->segment_ptr, 0);
         MPIDI_POSIX_REQUEST(rreq)->segment_first = 0;
@@ -238,10 +238,10 @@ static inline int MPIDI_SHM_mpi_imrecv(void *buf,
             if (MPIDI_POSIX_REQUEST(rreq)->segment_ptr) {
                 /* non-contig */
                 size_t last = MPIDI_POSIX_REQUEST(rreq)->segment_first + data_sz;
-                MPID_Segment_unpack(MPIDI_POSIX_REQUEST(rreq)->segment_ptr,
+                MPIR_Segment_unpack(MPIDI_POSIX_REQUEST(rreq)->segment_ptr,
                                     MPIDI_POSIX_REQUEST(rreq)->segment_first, (MPI_Aint *) & last,
                                     send_buffer);
-                MPID_Segment_free(MPIDI_POSIX_REQUEST(rreq)->segment_ptr);
+                MPIR_Segment_free(MPIDI_POSIX_REQUEST(rreq)->segment_ptr);
             }
             else
                 /* contig */
@@ -260,7 +260,7 @@ static inline int MPIDI_SHM_mpi_imrecv(void *buf,
                 /* non-contig */
                 size_t last =
                     MPIDI_POSIX_REQUEST(rreq)->segment_first + MPIDI_POSIX_EAGER_THRESHOLD;
-                MPID_Segment_unpack(MPIDI_POSIX_REQUEST(rreq)->segment_ptr,
+                MPIR_Segment_unpack(MPIDI_POSIX_REQUEST(rreq)->segment_ptr,
                                     MPIDI_POSIX_REQUEST(rreq)->segment_first, (MPI_Aint *) & last,
                                     send_buffer);
                 MPIDI_POSIX_REQUEST(rreq)->segment_first = last;
@@ -288,15 +288,15 @@ static inline int MPIDI_SHM_mpi_imrecv(void *buf,
 
   fn_exit:
     MPID_THREAD_CS_EXIT(POBJ, MPIDI_POSIX_SHM_MUTEX);
-    MPIR_FUNC_VERBOSE_EXIT(MPIDI_SHM_IMRECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_IMRECV);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
 }
 
 #undef FCNAME
-#define FCNAME DECL_FUNC(MPIDI_SHM_mpi_irecv)
-static inline int MPIDI_SHM_mpi_irecv(void *buf,
+#define FCNAME DECL_FUNC(MPIDI_POSIX_mpi_irecv)
+static inline int MPIDI_POSIX_mpi_irecv(void *buf,
                                       int count,
                                       MPI_Datatype datatype,
                                       int rank,
@@ -304,27 +304,32 @@ static inline int MPIDI_SHM_mpi_irecv(void *buf,
                                       MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPIDI_SHM_IRECV);
 
-    MPIR_FUNC_VERBOSE_ENTER(MPIDI_SHM_IRECV);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_MPI_IRECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_IRECV);
+
     MPID_THREAD_CS_ENTER(POBJ, MPIDI_POSIX_SHM_MUTEX);
+
     mpi_errno =
         MPIDI_POSIX_do_irecv(buf, count, datatype, rank, tag, comm, context_offset, request);
     MPID_THREAD_CS_EXIT(POBJ, MPIDI_POSIX_SHM_MUTEX);
-    MPIR_FUNC_VERBOSE_EXIT(MPIDI_SHM_IRECV);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_IRECV);
     return mpi_errno;
 }
 
 #undef FCNAME
-#define FCNAME DECL_FUNC(MPIDI_SHM_mpi_cancel_recv)
-static inline int MPIDI_SHM_mpi_cancel_recv(MPIR_Request * rreq)
+#define FCNAME DECL_FUNC(MPIDI_POSIX_mpi_cancel_recv)
+static inline int MPIDI_POSIX_mpi_cancel_recv(MPIR_Request * rreq)
 {
-    MPID_THREAD_CS_ENTER(POBJ, MPIDI_POSIX_SHM_MUTEX);
     MPIR_Request *req = MPIDI_POSIX_recvq_posted.head;
     MPIR_Request *prev_req = NULL;
 
-    while (req) {
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_MPI_CANCEL_RECV);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_MPI_CANCEL_RECV);
 
+    MPID_THREAD_CS_ENTER(POBJ, MPIDI_POSIX_SHM_MUTEX);
+
+    while (req) {
         if (req == rreq) {
             /* Remove request from shm posted receive queue */
 
@@ -351,7 +356,8 @@ static inline int MPIDI_SHM_mpi_cancel_recv(MPIR_Request * rreq)
     }
 
     MPID_THREAD_CS_EXIT(POBJ, MPIDI_POSIX_SHM_MUTEX);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_MPI_CANCEL_RECV);
     return MPI_SUCCESS;
 }
 
-#endif /* SHM_POSIX_RECV_H_INCLUDED */
+#endif /* POSIX_RECV_H_INCLUDED */

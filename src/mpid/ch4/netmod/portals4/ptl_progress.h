@@ -8,8 +8,8 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef NETMOD_PTL_PROGRESS_H_INCLUDED
-#define NETMOD_PTL_PROGRESS_H_INCLUDED
+#ifndef PTL_PROGRESS_H_INCLUDED
+#define PTL_PROGRESS_H_INCLUDED
 
 #include "ptl_impl.h"
 
@@ -20,7 +20,7 @@ static inline int MPIDI_PTL_am_handler(ptl_event_t * e)
     void *p_data;
     void *in_data;
     size_t data_sz, in_data_sz;
-    MPIDI_NM_am_completion_handler_fn cmpl_handler_fn = NULL;
+    MPIDIG_am_target_cmpl_cb target_cmpl_cb = NULL;
     struct iovec *iov;
     int i, is_contig, iov_len;
     size_t done, curr_len, rem;
@@ -29,15 +29,15 @@ static inline int MPIDI_PTL_am_handler(ptl_event_t * e)
     in_data = p_data = (e->start + (e->mlength - data_sz));
     int handler_id = e->hdr_data >> 56;
 
-    MPIDI_PTL_global.am_handlers[handler_id] (handler_id, e->start,
-                                              &p_data, &data_sz,
-                                              &is_contig, &cmpl_handler_fn, &rreq);
+    MPIDIG_global.target_msg_cbs[handler_id] (handler_id, e->start,
+                                              &p_data, &data_sz, &is_contig, &target_cmpl_cb,
+                                              &rreq);
 
     if (!rreq)
         goto fn_exit;
 
-    if ((!p_data || !data_sz) && cmpl_handler_fn) {
-        cmpl_handler_fn(rreq);
+    if ((!p_data || !data_sz) && target_cmpl_cb) {
+        target_cmpl_cb(rreq);
         goto fn_exit;
     }
 
@@ -76,15 +76,15 @@ static inline int MPIDI_PTL_am_handler(ptl_event_t * e)
         MPIR_STATUS_SET_COUNT(rreq->status, done);
     }
 
-    if (cmpl_handler_fn) {
-        cmpl_handler_fn(rreq);
+    if (target_cmpl_cb) {
+        target_cmpl_cb(rreq);
     }
 
   fn_exit:
     return mpi_errno;
 }
 
-static inline int MPIDI_NM_progress(void *netmod_context, int blocking)
+static inline int MPIDI_NM_progress(int vni, int blocking)
 {
     ptl_event_t e;
     unsigned int which;
@@ -99,16 +99,16 @@ static inline int MPIDI_NM_progress(void *netmod_context, int blocking)
             {
                 int count;
                 MPIR_Request *sreq = (MPIR_Request *) e.user_ptr;
-                int handler_id = sreq->dev.ch4.ch4u.netmod_am.portals4.handler_id;
+                int handler_id = sreq->dev.ch4.am.netmod_am.portals4.handler_id;
 
                 MPIR_cc_decr(sreq->cc_ptr, &count);
                 MPIR_Assert(count >= 0);
 
                 if (count == 0) {
-                    MPIDI_CH4U_request_release(sreq);
+                    MPIR_Request_free(sreq);
                     break;
                 }
-                MPIDI_PTL_global.send_cmpl_handlers[handler_id] (sreq);
+                MPIDIG_global.origin_cbs[handler_id] (sreq);
             }
             break;
         case PTL_EVENT_AUTO_UNLINK:
@@ -182,4 +182,4 @@ static inline int MPIDI_NM_progress_deactivate(int id)
     return MPI_SUCCESS;
 }
 
-#endif /* NETMOD_PTL_PROGRESS_H_INCLUDED */
+#endif /* PTL_PROGRESS_H_INCLUDED */

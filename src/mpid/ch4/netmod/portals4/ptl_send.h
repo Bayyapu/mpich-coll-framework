@@ -8,8 +8,8 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef NETMOD_PTL_SEND_H_INCLUDED
-#define NETMOD_PTL_SEND_H_INCLUDED
+#ifndef PTL_SEND_H_INCLUDED
+#define PTL_SEND_H_INCLUDED
 
 #include "ptl_impl.h"
 
@@ -18,31 +18,11 @@ static inline int MPIDI_NM_mpi_send(const void *buf,
                                     MPI_Datatype datatype,
                                     int rank,
                                     int tag,
-                                    MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
+                                    MPIR_Comm * comm, int context_offset,
+                                    MPIDI_av_entry_t *addr,
+                                    MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_send(buf, count, datatype, rank, tag, comm, context_offset, request);
-}
-
-static inline int MPIDI_NM_rsend(const void *buf,
-                                 int count,
-                                 MPI_Datatype datatype,
-                                 int rank,
-                                 int tag,
-                                 MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
-{
-    return MPIDI_CH4U_rsend(buf, count, datatype, rank, tag, comm, context_offset, request);
-}
-
-
-
-static inline int MPIDI_NM_irsend(const void *buf,
-                                  int count,
-                                  MPI_Datatype datatype,
-                                  int rank,
-                                  int tag,
-                                  MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
-{
-    return MPIDI_CH4U_irsend(buf, count, datatype, rank, tag, comm, context_offset, request);
+    return MPIDIG_mpi_send(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_ssend(const void *buf,
@@ -50,14 +30,16 @@ static inline int MPIDI_NM_mpi_ssend(const void *buf,
                                      MPI_Datatype datatype,
                                      int rank,
                                      int tag,
-                                     MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
+                                     MPIR_Comm * comm, int context_offset,
+                                     MPIDI_av_entry_t *addr,
+                                     MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_ssend(buf, count, datatype, rank, tag, comm, context_offset, request);
+    return MPIDIG_mpi_ssend(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_startall(int count, MPIR_Request * requests[])
 {
-    return MPIDI_CH4U_mpi_startall(count, requests);
+    return MPIDIG_mpi_startall(count, requests);
 }
 
 static inline int MPIDI_NM_mpi_send_init(const void *buf,
@@ -66,9 +48,10 @@ static inline int MPIDI_NM_mpi_send_init(const void *buf,
                                          int rank,
                                          int tag,
                                          MPIR_Comm * comm, int context_offset,
+                                         MPIDI_av_entry_t *addr,
                                          MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_send_init(buf, count, datatype, rank, tag, comm, context_offset, request);
+    return MPIDIG_mpi_send_init(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_ssend_init(const void *buf,
@@ -77,10 +60,10 @@ static inline int MPIDI_NM_mpi_ssend_init(const void *buf,
                                           int rank,
                                           int tag,
                                           MPIR_Comm * comm, int context_offset,
+                                          MPIDI_av_entry_t *addr,
                                           MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_ssend_init(buf, count, datatype, rank, tag, comm, context_offset,
-                                     request);
+    return MPIDIG_mpi_ssend_init(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_bsend_init(const void *buf,
@@ -89,10 +72,10 @@ static inline int MPIDI_NM_mpi_bsend_init(const void *buf,
                                           int rank,
                                           int tag,
                                           MPIR_Comm * comm, int context_offset,
+                                          MPIDI_av_entry_t *addr,
                                           MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_bsend_init(buf, count, datatype, rank, tag, comm, context_offset,
-                                     request);
+    return MPIDIG_mpi_bsend_init(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_rsend_init(const void *buf,
@@ -101,10 +84,10 @@ static inline int MPIDI_NM_mpi_rsend_init(const void *buf,
                                           int rank,
                                           int tag,
                                           MPIR_Comm * comm, int context_offset,
+                                          MPIDI_av_entry_t *addr,
                                           MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_rsend_init(buf, count, datatype, rank, tag, comm, context_offset,
-                                     request);
+    return MPIDIG_mpi_rsend_init(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_isend(const void *buf,
@@ -112,9 +95,11 @@ static inline int MPIDI_NM_mpi_isend(const void *buf,
                                      MPI_Datatype datatype,
                                      int rank,
                                      int tag,
-                                     MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
+                                     MPIR_Comm * comm, int context_offset,
+                                     MPIDI_av_entry_t *addr,
+                                     MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_isend(buf, count, datatype, rank, tag, comm, context_offset, request);
+    return MPIDIG_mpi_isend(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_issend(const void *buf,
@@ -122,14 +107,16 @@ static inline int MPIDI_NM_mpi_issend(const void *buf,
                                       MPI_Datatype datatype,
                                       int rank,
                                       int tag,
-                                      MPIR_Comm * comm, int context_offset, MPIR_Request ** request)
+                                      MPIR_Comm * comm, int context_offset,
+                                      MPIDI_av_entry_t *addr,
+                                      MPIR_Request ** request)
 {
-    return MPIDI_CH4U_mpi_issend(buf, count, datatype, rank, tag, comm, context_offset, request);
+    return MPIDIG_mpi_issend(buf, count, datatype, rank, tag, comm, context_offset, request);
 }
 
 static inline int MPIDI_NM_mpi_cancel_send(MPIR_Request * sreq)
 {
-    return MPIDI_CH4U_mpi_cancel_send(sreq);
+    return MPIDIG_mpi_cancel_send(sreq);
 }
 
-#endif /* NETMOD_PTL_SEND_H_INCLUDED */
+#endif /* PTL_SEND_H_INCLUDED */

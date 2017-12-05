@@ -11,27 +11,26 @@
 #ifndef MPIDPRE_H_INCLUDED
 #define MPIDPRE_H_INCLUDED
 
-#if defined(HAVE_SYS_TYPES_H)
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 
-#include "mpidu_dataloop.h"
+#include "mpir_dataloop.h"
 #include "mpid_thread.h"
 #include "mpid_sched.h"
 #include "mpid_timers_fallback.h"
 #include "netmodpre.h"
 #include "shmpre.h"
-#include "mpl_uthash.h"
+#include "uthash.h"
+#include "ch4_coll_params.h"
 
 typedef struct {
     union {
     MPIDI_NM_DT_DECL} netmod;
 } MPIDI_Devdt_t;
 #define MPID_DEV_DATATYPE_DECL   MPIDI_Devdt_t   dev;
-#include "mpid_datatype_fallback.h"
 
 typedef int MPID_Progress_state;
-#define HAVE_GPID_ROUTINES
 
 #define CH4_COMPILE_TIME_ASSERT(expr_)                                  \
   do { switch(0) { case 0: case (expr_): default: break; } } while (0)
@@ -125,7 +124,6 @@ typedef struct MPIDI_CH4U_acc_req_t {
     MPI_Op op;
     void *result_addr;
     int result_count;
-    int do_get;
     void *origin_addr;
     MPI_Datatype result_datatype;
 } MPIDI_CH4U_acc_req_t;
@@ -142,7 +140,7 @@ typedef struct MPIDI_CH4U_req_ext_t {
     };
 
     struct iovec *iov;
-    void *cmpl_handler_fn;
+    void *target_cmpl_cb;
     uint64_t seq_no;
     uint64_t request;
     uint64_t status;
@@ -158,7 +156,7 @@ typedef struct MPIDI_CH4U_req_t {
     void *buffer;
     uint64_t count;
     uint64_t tag;
-    int src_rank;
+    int rank;
     MPI_Datatype datatype;
 } MPIDI_CH4U_req_t;
 
@@ -175,7 +173,7 @@ typedef struct {
 
     union {
         /* The first fields are used by the CH4U apis */
-        MPIDI_CH4U_req_t ch4u;
+        MPIDI_CH4U_req_t am;
 
         /* Used by the netmod direct apis */
         union {
@@ -186,9 +184,8 @@ typedef struct {
     } ch4;
 } MPIDI_Devreq_t;
 #define MPIDI_REQUEST_HDR_SIZE              offsetof(struct MPIR_Request, dev.ch4.netmod)
-#define MPIDI_REQUEST_CH4U_HDR_SIZE         offsetof(struct MPIR_Request, dev.ch4.netmod_am)
 #define MPIDI_CH4I_REQUEST(req,field)       (((req)->dev).field)
-#define MPIDI_CH4U_REQUEST(req,field)       (((req)->dev.ch4.ch4u).field)
+#define MPIDI_CH4U_REQUEST(req,field)       (((req)->dev.ch4.am).field)
 
 #ifdef MPIDI_BUILD_CH4_SHM
 #define MPIDI_CH4I_REQUEST_ANYSOURCE_PARTNER(req)  (((req)->dev).anysource_partner_request)
@@ -197,13 +194,13 @@ typedef struct {
 #endif
 
 MPL_STATIC_INLINE_PREFIX void MPID_Request_create_hook(struct MPIR_Request *req);
-
 MPL_STATIC_INLINE_PREFIX void MPID_Request_free_hook(struct MPIR_Request *req);
+MPL_STATIC_INLINE_PREFIX void MPID_Request_destroy_hook(struct MPIR_Request *req);
 
 typedef struct MPIDI_CH4U_win_shared_info {
     uint32_t disp_unit;
     size_t size;
-} __attribute__ ((packed)) MPIDI_CH4U_win_shared_info_t;
+} MPIDI_CH4U_win_shared_info_t;
 
 #define MPIDI_CH4I_ACCU_ORDER_RAR (1)
 #define MPIDI_CH4I_ACCU_ORDER_RAW (1 << 1)
@@ -218,6 +215,7 @@ typedef enum {
 typedef struct MPIDI_CH4U_win_info_args_t {
     int no_locks;
     int same_size;
+    int same_disp_unit;
     int accumulate_ordering;
     int alloc_shared_noncontig;
     MPIDI_CH4U_win_info_accumulate_ops accumulate_ops;
@@ -230,53 +228,89 @@ struct MPIDI_CH4U_win_lock {
     uint16_t type;
 };
 
-struct MPIDI_CH4U_win_queue {
+typedef struct MPIDI_CH4U_win_lock_recvd {
     struct MPIDI_CH4U_win_lock *head;
     struct MPIDI_CH4U_win_lock *tail;
-};
+    int type;                   /* current lock's type */
+    unsigned count;             /* count of granted locks (not received) */
+} MPIDI_CH4U_win_lock_recvd_t;
 
-typedef struct MPIDI_CH4U_win_lock_info {
-    unsigned peer;
-    int lock_type;
-    struct MPIR_Win *win;
-    volatile unsigned done;
-} MPIDI_CH4U_win_lock_info;
+typedef struct MPIDI_CH4U_win_target_sync_lock {
+    /* NOTE: use volatile to avoid compiler optimization which keeps reading
+     * register value when no dependency or function pointer is found in fully
+     * inlined code.*/
+    volatile unsigned locked;   /* locked == 0 or 1 */
+} MPIDI_CH4U_win_target_sync_lock_t;
 
 typedef struct MPIDI_CH4U_win_sync_lock {
-    struct {
-        volatile unsigned locked;
-        volatile unsigned allLocked;
-    } remote;
-    struct {
-        struct MPIDI_CH4U_win_queue requested;
-        int type;
-        unsigned count;
-    } local;
-} MPIDI_CH4U_win_sync_lock;
+    unsigned count;             /* count of lock epochs on the window */
+} MPIDI_CH4U_win_sync_lock_t;
+
+typedef struct MPIDI_CH4U_win_sync_lockall {
+    /* NOTE: use volatile to avoid compiler optimization which keeps reading
+     * register value when no dependency or function pointer is found in fully
+     * inlined code.*/
+    volatile unsigned allLocked;        /* 0 <= allLocked < size */
+} MPIDI_CH4U_win_sync_lockall_t;
 
 typedef struct MPIDI_CH4U_win_sync_pscw {
     struct MPIR_Group *group;
+    /* NOTE: use volatile to avoid compiler optimization which keeps reading
+     * register value when no dependency or function pointer is found in fully
+     * inlined code.*/
     volatile unsigned count;
-} MPIDI_CH4U_win_sync_pscw;
+} MPIDI_CH4U_win_sync_pscw_t;
 
-typedef struct MPIDI_CH4U_win_sync_t {
-    volatile int origin_epoch_type;
-    volatile int target_epoch_type;
-    MPIDI_CH4U_win_sync_pscw sc, pw;
-    MPIDI_CH4U_win_sync_lock lock;
+typedef struct MPIDI_CH4U_win_target_sync {
+    int access_epoch_type;      /* NONE, LOCK. */
+    MPIDI_CH4U_win_target_sync_lock_t lock;
+    uint32_t assert_mode;       /* bit-vector OR of zero or more of the following integer constant:
+                                 * MPI_MODE_NOCHECK, MPI_MODE_NOSTORE, MPI_MODE_NOPUT, MPI_MODE_NOPRECEDE, MPI_MODE_NOSUCCEED. */
+} MPIDI_CH4U_win_target_sync_t;
+
+typedef struct MPIDI_CH4U_win_sync {
+    int access_epoch_type;      /* NONE, FENCE, LOCKALL, START,
+                                 * LOCK (refer to target_sync). */
+    int exposure_epoch_type;    /* NONE, FENCE, POST. */
+    uint32_t assert_mode;       /* bit-vector OR of zero or more of the following integer constant:
+                                 * MPI_MODE_NOCHECK, MPI_MODE_NOSTORE, MPI_MODE_NOPUT, MPI_MODE_NOPRECEDE, MPI_MODE_NOSUCCEED. */
+
+    /* access epochs */
+    /* TODO: Can we put access epochs in union,
+     * since no concurrent epochs is allowed ? */
+    MPIDI_CH4U_win_sync_pscw_t sc;
+    MPIDI_CH4U_win_sync_lockall_t lockall;
+    MPIDI_CH4U_win_sync_lock_t lock;
+
+    /* exposure epochs */
+    MPIDI_CH4U_win_sync_pscw_t pw;
+    MPIDI_CH4U_win_lock_recvd_t lock_recvd;
 } MPIDI_CH4U_win_sync_t;
+
+typedef struct MPIDI_CH4U_win_target {
+    MPIR_cc_t local_cmpl_cnts;  /* increase at OP issuing, decrease at local completion */
+    MPIR_cc_t remote_cmpl_cnts; /* increase at OP issuing, decrease at remote completion */
+    MPIDI_CH4U_win_target_sync_t sync;
+    int rank;
+    UT_hash_handle hash_handle;
+} MPIDI_CH4U_win_target_t;
 
 typedef struct MPIDI_CH4U_win_t {
     uint64_t win_id;
     void *mmap_addr;
     int64_t mmap_sz;
-    OPA_int_t outstanding_ops;
+
+    /* per-window OP completion for fence */
+    MPIR_cc_t local_cmpl_cnts;  /* increase at OP issuing, decrease at local completion */
+    MPIR_cc_t remote_cmpl_cnts; /* increase at OP issuing, decrease at remote completion */
+
     MPI_Aint *sizes;
-    MPIDI_CH4U_win_lock_info *lockQ;
     MPIDI_CH4U_win_sync_t sync;
     MPIDI_CH4U_win_info_args_t info_args;
     MPIDI_CH4U_win_shared_info_t *shared_table;
-    MPL_UT_hash_handle hash_handle;
+
+    /* per-target structure for sync and OP completion. */
+    MPIDI_CH4U_win_target_t *targets;
 } MPIDI_CH4U_win_t;
 
 typedef struct {
@@ -288,7 +322,7 @@ typedef struct {
 #define MPIDI_CH4U_WIN(win,field)        (((win)->dev.ch4u).field)
 #define MPIDI_CH4U_WINFO(win,rank) (MPIDI_CH4U_win_info_t*) &(MPIDI_CH4U_WIN(win, info_table)[rank])
 
-typedef unsigned MPIDII_locality_t;
+typedef unsigned MPIDI_locality_t;
 
 typedef struct MPIDI_CH4U_comm_t {
     MPIDI_CH4U_rreq_t *posted_list;
@@ -296,45 +330,45 @@ typedef struct MPIDI_CH4U_comm_t {
     uint32_t window_instance;
 } MPIDI_CH4U_comm_t;
 
-#define MPIDII_CALC_STRIDE(rank, stride, blocksize, offset) \
+#define MPIDI_CALC_STRIDE(rank, stride, blocksize, offset) \
     ((rank) / (blocksize) * ((stride) - (blocksize)) + (rank) + (offset))
 
-#define MPIDII_CALC_STRIDE_SIMPLE(rank, stride, offset) \
+#define MPIDI_CALC_STRIDE_SIMPLE(rank, stride, offset) \
     ((rank) * (stride) + (offset))
 
 typedef enum {
-    MPIDII_RANK_MAP_DIRECT,
-    MPIDII_RANK_MAP_DIRECT_INTRA,
-    MPIDII_RANK_MAP_OFFSET,
-    MPIDII_RANK_MAP_OFFSET_INTRA,
-    MPIDII_RANK_MAP_STRIDE,
-    MPIDII_RANK_MAP_STRIDE_INTRA,
-    MPIDII_RANK_MAP_STRIDE_BLOCK,
-    MPIDII_RANK_MAP_STRIDE_BLOCK_INTRA,
-    MPIDII_RANK_MAP_LUT,
-    MPIDII_RANK_MAP_LUT_INTRA,
-    MPIDII_RANK_MAP_MLUT,
-    MPIDII_RANK_MAP_NONE
-} MPIDII_rank_map_mode;
+    MPIDI_RANK_MAP_DIRECT,
+    MPIDI_RANK_MAP_DIRECT_INTRA,
+    MPIDI_RANK_MAP_OFFSET,
+    MPIDI_RANK_MAP_OFFSET_INTRA,
+    MPIDI_RANK_MAP_STRIDE,
+    MPIDI_RANK_MAP_STRIDE_INTRA,
+    MPIDI_RANK_MAP_STRIDE_BLOCK,
+    MPIDI_RANK_MAP_STRIDE_BLOCK_INTRA,
+    MPIDI_RANK_MAP_LUT,
+    MPIDI_RANK_MAP_LUT_INTRA,
+    MPIDI_RANK_MAP_MLUT,
+    MPIDI_RANK_MAP_NONE
+} MPIDI_rank_map_mode;
 
-typedef int MPIDII_lpid_t;
+typedef int MPIDI_lpid_t;
 typedef struct {
     int avtid;
     int lpid;
-} MPIDII_gpid_t;
+} MPIDI_gpid_t;
 
 typedef struct {
     MPIR_OBJECT_HEADER;
-    MPIDII_lpid_t lpid[0];
-} MPIDII_rank_map_lut_t;
+    MPIDI_lpid_t lpid[0];
+} MPIDI_rank_map_lut_t;
 
 typedef struct {
     MPIR_OBJECT_HEADER;
-    MPIDII_gpid_t gpid[0];
-} MPIDII_rank_map_mlut_t;
+    MPIDI_gpid_t gpid[0];
+} MPIDI_rank_map_mlut_t;
 
 typedef struct {
-    MPIDII_rank_map_mode mode;
+    MPIDI_rank_map_mode mode;
     int avtid;
     int size;
 
@@ -349,15 +383,15 @@ typedef struct {
 
     union {
         struct {
-            MPIDII_rank_map_lut_t *t;
-            MPIDII_lpid_t *lpid;
+            MPIDI_rank_map_lut_t *t;
+            MPIDI_lpid_t *lpid;
         } lut;
         struct {
-            MPIDII_rank_map_mlut_t *t;
-            MPIDII_gpid_t *gpid;
+            MPIDI_rank_map_mlut_t *t;
+            MPIDI_gpid_t *gpid;
         } mlut;
     } irreg;
-} MPIDII_rank_map_t;
+} MPIDI_rank_map_t;
 
 typedef struct MPIDI_Devcomm_t {
     struct {
@@ -371,55 +405,42 @@ typedef struct MPIDI_Devcomm_t {
         union {
         MPIDI_SHM_COMM_DECL} shm;
 
-        MPIDII_rank_map_t map;
-        MPIDII_rank_map_t local_map;
+        MPIDI_rank_map_t map;
+        MPIDI_rank_map_t local_map;
     } ch4;
 } MPIDI_Devcomm_t;
 #define MPIDI_CH4U_COMM(comm,field) ((comm)->dev.ch4.ch4u).field
-#define MPIDII_COMM(comm,field) ((comm)->dev.ch4).field
-
-
-#define MPID_USE_NODE_IDS
-typedef uint16_t MPID_Node_id_t;
+#define MPIDI_COMM(comm,field) ((comm)->dev.ch4).field
 
 typedef struct {
     union {
     MPIDI_NM_OP_DECL} netmod;
 } MPIDI_Devop_t;
 
-typedef struct {
-    union {
-    MPIDI_NM_GPID_DECL} netmod;
-    MPID_Node_id_t node;
-} MPIDI_Devgpid_t;
-
 #define MPID_DEV_REQUEST_DECL    MPIDI_Devreq_t  dev;
 #define MPID_DEV_WIN_DECL        MPIDI_Devwin_t  dev;
 #define MPID_DEV_COMM_DECL       MPIDI_Devcomm_t dev;
 #define MPID_DEV_OP_DECL         MPIDI_Devop_t   dev;
-#define MPID_DEV_GPID_DECL       MPIDI_Devgpid_t dev;
-
-#define MPIDII_GPID(gpid) (gpid)->dev
 
 typedef struct {
     union {
     MPIDI_NM_ADDR_DECL} netmod;
 #ifdef MPIDI_BUILD_CH4_LOCALITY_INFO
-    MPIDII_locality_t is_local;
+    MPIDI_locality_t is_local;
 #endif
-} MPIDII_av_entry_t;
+} MPIDI_av_entry_t;
 
 typedef struct {
     MPIR_OBJECT_HEADER;
     int size;
-    MPIDII_av_entry_t table[0];
-} MPIDII_av_table_t;
+    MPIDI_av_entry_t table[0];
+} MPIDI_av_table_t;
 
-extern MPIDII_av_table_t **MPIDII_av_table;
-extern MPIDII_av_table_t *MPIDII_av_table0;
+extern MPIDI_av_table_t **MPIDI_av_table;
+extern MPIDI_av_table_t *MPIDI_av_table0;
 
-#define MPIDIU_get_av_table(avtid) (MPIDII_av_table[(avtid)])
-#define MPIDIU_get_av(avtid, lpid) (MPIDII_av_table[(avtid)]->table[(lpid)])
+#define MPIDIU_get_av_table(avtid) (MPIDI_av_table[(avtid)])
+#define MPIDIU_get_av(avtid, lpid) (MPIDI_av_table[(avtid)]->table[(lpid)])
 
 #define MPIDIU_get_node_map(avtid)   (MPIDI_CH4_Global.node_map[(avtid)])
 
@@ -432,26 +453,36 @@ extern MPIDII_av_table_t *MPIDII_av_table0;
 #define MPID_Comm_create_hook   MPIDI_Comm_create_hook
 #define MPID_Comm_free_hook     MPIDI_Comm_free_hook
 
-#define MPID_Type_create_hook   MPIDI_Type_create_hook
+MPL_STATIC_INLINE_PREFIX int MPIDI_Type_commit_hook(MPIR_Datatype * type);
+MPL_STATIC_INLINE_PREFIX int MPIDI_Type_free_hook(MPIR_Datatype * type);
+
+#define MPID_Type_commit_hook   MPIDI_Type_commit_hook
 #define MPID_Type_free_hook     MPIDI_Type_free_hook
 
-#define MPID_Op_create_hook     MPIDI_Op_create_hook
+#define MPID_Op_commit_hook     MPIDI_Op_commit_hook
 #define MPID_Op_free_hook       MPIDI_Op_free_hook
 
-/* operation for (avtid, lpid) to/from "lpid64" */
-/* hard code limit on number of live comm worlds. This should be fixed by future
- * LUPID patch */
-#define MPIDIU_AVTID_BITS                    (8)
-#define MPIDIU_LPID_BITS                     (24)
-#define MPIDIU_LPID_MASK                     (0x00FFFFFFU)
-#define MPIDIU_AVTID_MASK                    (0xFF000000U)
+/*
+ * operation for (avtid, lpid) to/from "lupid"
+ * 1 bit is reserved for "new_avt_mark". It will be cleared before accessing
+ * the avtid and lpid. Therefore, the avtid mask does have that bit set to 0
+ */
+#define MPIDIU_AVTID_BITS                    (7)
+#define MPIDIU_LPID_BITS                     (8 * sizeof(int) - (MPIDIU_AVTID_BITS + 1))
+#define MPIDIU_LPID_MASK                     (0xFFFFFFFFU >> (MPIDIU_AVTID_BITS + 1))
+#define MPIDIU_AVTID_MASK                    (~MPIDIU_LPID_MASK)
 #define MPIDIU_NEW_AVT_MARK                  (0x80000000U)
-#define MPIDIU_LPID_CREATE(avtid, lpid)      (((avtid) << MPIDIU_LPID_BITS) | (lpid))
-#define MPIDIU_LPID_GET_AVTID(lpid)          ((((lpid) & MPIDIU_AVTID_MASK) >> MPIDIU_LPID_BITS))
-#define MPIDIU_LPID_GET_LPID(lpid)           (((lpid) & MPIDIU_LPID_MASK))
-#define MPIDIU_LPID_SET_NEW_AVT_MARK(lpid)   ((lpid) |= MPIDIU_NEW_AVT_MARK)
-#define MPIDIU_LPID_CLEAR_NEW_AVT_MARK(lpid) ((lpid) &= (~MPIDIU_NEW_AVT_MARK))
-#define MPIDIU_LPID_IS_NEW_AVT(lpid)         ((lpid) & MPIDIU_NEW_AVT_MARK)
+#define MPIDIU_LUPID_CREATE(avtid, lpid)      (((avtid) << MPIDIU_LPID_BITS) | (lpid))
+#define MPIDIU_LUPID_GET_AVTID(lupid)          ((((lupid) & MPIDIU_AVTID_MASK) >> MPIDIU_LPID_BITS))
+#define MPIDIU_LUPID_GET_LPID(lupid)           (((lupid) & MPIDIU_LPID_MASK))
+#define MPIDIU_LUPID_SET_NEW_AVT_MARK(lupid)   ((lupid) |= MPIDIU_NEW_AVT_MARK)
+#define MPIDIU_LUPID_CLEAR_NEW_AVT_MARK(lupid) ((lupid) &= (~MPIDIU_NEW_AVT_MARK))
+#define MPIDIU_LUPID_IS_NEW_AVT(lupid)         ((lupid) & MPIDIU_NEW_AVT_MARK)
+
+#define MPIDI_DYNPROC_MASK                 (0x80000000U)
+
+#define MPID_INTERCOMM_NO_DYNPROC(comm) \
+    (MPIDI_COMM((comm),map).avtid == 0 && MPIDI_COMM((comm),local_map).avtid == 0)
 
 
 #include "mpidu_pre.h"

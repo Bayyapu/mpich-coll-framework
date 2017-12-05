@@ -15,10 +15,71 @@
 #include "ch4i_util.h"
 #include <opa_primitives.h>
 #include "mpir_info.h"
-#include "mpl_uthash.h"
+#include "uthash.h"
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif /* HAVE_SYS_MMAN_H */
+
+/*
+=== BEGIN_MPI_T_CVAR_INFO_BLOCK ===
+
+cvars:
+    - name        : MPIR_CVAR_CH4_RMA_MEM_EFFICIENT
+      category    : CH4
+      type        : boolean
+      default     : false
+      class       : none
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_GROUP_EQ
+      description : >-
+        If true, memory-saving mode is on, per-target object is released
+        at the epoch end call.
+        If false, performance-efficient mode is on, all allocated target
+        objects are cached and freed at win_finalize.
+
+=== END_MPI_T_CVAR_INFO_BLOCK ===
+*/
+
+extern MPIR_T_pvar_timer_t PVAR_TIMER_rma_winlock_getlocallock ATTRIBUTE((unused));
+extern MPIR_T_pvar_timer_t PVAR_TIMER_rma_wincreate_allgather ATTRIBUTE((unused));
+extern MPIR_T_pvar_timer_t PVAR_TIMER_rma_amhdr_set ATTRIBUTE((unused));
+
+#undef FUNCNAME
+#define FUNCNAME MPIDI_CH4_RMA_Init_sync_pvars
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+static inline int MPIDI_CH4R_RMA_Init_sync_pvars(void)
+{
+    int mpi_errno = MPI_SUCCESS;
+    /* rma_winlock_getlocallock */
+    MPIR_T_PVAR_TIMER_REGISTER_STATIC(RMA,
+            MPI_DOUBLE,
+            rma_winlock_getlocallock,
+            MPI_T_VERBOSITY_MPIDEV_DETAIL,
+            MPI_T_BIND_NO_OBJECT,
+            MPIR_T_PVAR_FLAG_READONLY,
+            "RMA", "WIN_LOCK:Get local lock (in seconds)");
+
+    /* rma_wincreate_allgather */
+    MPIR_T_PVAR_TIMER_REGISTER_STATIC(RMA,
+            MPI_DOUBLE,
+            rma_wincreate_allgather,
+            MPI_T_VERBOSITY_MPIDEV_DETAIL,
+            MPI_T_BIND_NO_OBJECT,
+            MPIR_T_PVAR_FLAG_READONLY,
+            "RMA", "WIN_CREATE:Allgather (in seconds)");
+
+    /* rma_amhdr_set */
+    MPIR_T_PVAR_TIMER_REGISTER_STATIC(RMA,
+            MPI_DOUBLE,
+            rma_amhdr_set,
+            MPI_T_VERBOSITY_MPIDEV_DETAIL,
+            MPI_T_BIND_NO_OBJECT,
+            MPIR_T_PVAR_FLAG_READONLY,
+            "RMA", "Set fields in AM Handler (in seconds)");
+
+    return mpi_errno;
+}
 
 #undef FUNCNAME
 #define FUNCNAME MPIDI_CH4R_mpi_win_set_info
@@ -28,11 +89,11 @@ static inline int MPIDI_CH4R_mpi_win_set_info(MPIR_Win * win, MPIR_Info * info)
 {
     int mpi_errno = MPI_SUCCESS;
     MPIR_Errflag_t errflag = MPIR_ERR_NONE;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_NETMOD_CH4I_WIN_SET_INFO);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_NETMOD_CH4I_WIN_SET_INFO);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_SET_INFO);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_SET_INFO);
 
     MPIR_Info *curr_ptr;
-    char *value, *token, *savePtr;
+    char *value, *token, *savePtr = NULL;
     int save_ordering;
 
     curr_ptr = info->next;
@@ -41,12 +102,14 @@ static inline int MPIDI_CH4R_mpi_win_set_info(MPIR_Win * win, MPIR_Info * info)
         if (!strcmp(curr_ptr->key, "no_locks")) {
             if (!strcmp(curr_ptr->value, "true"))
                 MPIDI_CH4U_WIN(win, info_args).no_locks = 1;
-            else
+            else if (!strcmp(curr_ptr->value, "false"))
                 MPIDI_CH4U_WIN(win, info_args).no_locks = 0;
         }
         else if (!strcmp(curr_ptr->key, "accumulate_ordering")) {
             save_ordering = MPIDI_CH4U_WIN(win, info_args).accumulate_ordering;
             MPIDI_CH4U_WIN(win, info_args).accumulate_ordering = 0;
+            if (!strcmp(curr_ptr->value, "none"))
+                goto next;
             value = curr_ptr->value;
             token = (char *) strtok_r(value, ",", &savePtr);
 
@@ -77,17 +140,36 @@ static inline int MPIDI_CH4R_mpi_win_set_info(MPIR_Win * win, MPIR_Info * info)
                 MPIDI_CH4U_WIN(win, info_args).accumulate_ordering = save_ordering;
         }
         else if (!strcmp(curr_ptr->key, "accumulate_ops")) {
-            /* the default setting is MPIDI_ACCU_SAME_OP_NO_OP */
             if (!strcmp(curr_ptr->value, "same_op"))
                 MPIDI_CH4U_WIN(win, info_args).accumulate_ops = MPIDI_CH4I_ACCU_SAME_OP;
+            else if (!strcmp(curr_ptr->value, "same_op_no_op"))
+                MPIDI_CH4U_WIN(win, info_args).accumulate_ops = MPIDI_CH4I_ACCU_SAME_OP_NO_OP;
         }
-
+        else if (!strcmp(curr_ptr->key, "same_disp_unit")) {
+            if (!strcmp(curr_ptr->value, "true"))
+                MPIDI_CH4U_WIN(win, info_args).same_disp_unit = 1;
+            else if (!strcmp(curr_ptr->value, "false"))
+                MPIDI_CH4U_WIN(win, info_args).same_disp_unit = 0;
+        }
+        else if (!strcmp(curr_ptr->key, "same_size")) {
+            if (!strcmp(curr_ptr->value, "true"))
+                MPIDI_CH4U_WIN(win, info_args).same_size = 1;
+            else if (!strcmp(curr_ptr->value, "false"))
+                MPIDI_CH4U_WIN(win, info_args).same_size = 0;
+        }
+        else if (!strcmp(curr_ptr->key, "alloc_shared_noncontig")) {
+            if (!strcmp(curr_ptr->value, "true"))
+                MPIDI_CH4U_WIN(win, info_args).alloc_shared_noncontig = 1;
+            else if (!strcmp(curr_ptr->value, "false"))
+                MPIDI_CH4U_WIN(win, info_args).alloc_shared_noncontig = 0;
+        }
+      next:
         curr_ptr = curr_ptr->next;
     }
 
-    mpi_errno = MPIR_Barrier_impl(win->comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(win->comm_ptr, &errflag);
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_SET_INFO);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_SET_INFO);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -104,14 +186,25 @@ static inline int MPIDI_CH4R_win_init(MPI_Aint length,
                                       MPIR_Comm * comm_ptr, int create_flavor, int model)
 {
     int mpi_errno = MPI_SUCCESS;
-
     MPIR_Win *win = (MPIR_Win *) MPIR_Handle_obj_alloc(&MPIR_Win_mem);
+    MPIDI_CH4U_win_target_t *targets = NULL;
+    MPIR_Comm *win_comm_ptr;
+
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_WIN_INIT);
+    MPIR_FUNC_VERBOSE_RMA_ENTER(MPID_STATE_MPIDI_CH4R_WIN_INIT);
+
     MPIR_ERR_CHKANDSTMT(win == NULL, mpi_errno, MPI_ERR_NO_MEM, goto fn_fail, "**nomem");
     *win_ptr = win;
 
     memset(&win->dev.ch4u, 0, sizeof(MPIDI_CH4U_win_t));
-    win->comm_ptr = comm_ptr;
-    MPIR_Comm_add_ref(comm_ptr);
+
+    /* Duplicate the original communicator here to avoid having collisions
+     * between internal collectives */
+    mpi_errno = MPIR_Comm_dup_impl(comm_ptr, &win_comm_ptr);
+    if (MPI_SUCCESS != mpi_errno)
+        MPIR_ERR_POP(mpi_errno);
+
+    MPIDI_CH4U_WIN(win, targets) = targets;
 
     win->errhandler = NULL;
     win->base = NULL;
@@ -122,14 +215,11 @@ static inline int MPIDI_CH4R_win_init(MPI_Aint length,
     win->copyCreateFlavor = (MPIR_Win_flavor_t) 0;
     win->copyModel = (MPIR_Win_model_t) 0;
     win->attributes = NULL;
-    win->comm_ptr = comm_ptr;
+    win->comm_ptr = win_comm_ptr;
     win->copyDispUnit = 0;
     win->copySize = 0;
     MPIDI_CH4U_WIN(win, shared_table) = NULL;
-    if ((info != NULL) && ((int *) info != (int *) MPI_INFO_NULL)) {
-        mpi_errno = MPIDI_CH4R_mpi_win_set_info(win, info);
-        MPIR_Assert(mpi_errno == 0);
-    }
+    MPIDI_CH4U_WIN(win, sync).assert_mode = 0;
 
     /* Initialize the info (hint) flags per window */
     MPIDI_CH4U_WIN(win, info_args).no_locks = 0;
@@ -139,15 +229,26 @@ static inline int MPIDI_CH4R_win_init(MPI_Aint length,
                                                           MPIDI_CH4I_ACCU_ORDER_WAW);
     MPIDI_CH4U_WIN(win, info_args).accumulate_ops = MPIDI_CH4I_ACCU_SAME_OP_NO_OP;
     MPIDI_CH4U_WIN(win, info_args).same_size = 0;
+    MPIDI_CH4U_WIN(win, info_args).same_disp_unit = 0;
     MPIDI_CH4U_WIN(win, info_args).alloc_shared_noncontig = 0;
+
+    if ((info != NULL) && ((int *) info != (int *) MPI_INFO_NULL)) {
+        mpi_errno = MPIDI_CH4R_mpi_win_set_info(win, info);
+        MPIR_Assert(mpi_errno == 0);
+    }
+
+
     MPIDI_CH4U_WIN(win, mmap_sz) = 0;
     MPIDI_CH4U_WIN(win, mmap_addr) = NULL;
 
+    MPIR_cc_set(&MPIDI_CH4U_WIN(win, local_cmpl_cnts), 0);
+    MPIR_cc_set(&MPIDI_CH4U_WIN(win, remote_cmpl_cnts), 0);
+
     MPIDI_CH4U_WIN(win, win_id) = MPIDI_CH4U_generate_win_id(comm_ptr);
-    MPL_HASH_ADD(dev.ch4u.hash_handle, MPIDI_CH4_Global.win_hash,
-                 dev.ch4u.win_id, sizeof(uint64_t), win);
+    MPIDI_CH4U_map_set(MPIDI_CH4_Global.win_map, MPIDI_CH4U_WIN(win, win_id), win, MPL_MEM_RMA);
 
   fn_exit:
+    MPIR_FUNC_VERBOSE_RMA_EXIT(MPID_STATE_MPIDI_CH4R_WIN_INIT);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -161,13 +262,13 @@ static inline int MPIDI_CH4I_fill_ranks_in_win_grp(MPIR_Win * win_ptr, MPIR_Grou
                                                    int *ranks_in_win_grp)
 {
     int mpi_errno = MPI_SUCCESS;
-    int i, *ranks_in_grp;
+    int i, *ranks_in_grp = NULL;
     MPIR_Group *win_grp_ptr;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_FILL_RANKS_IN_WIN_GRP);
-    MPIR_FUNC_VERBOSE_RMA_ENTER(MPID_STATE_CH4I_FILL_RANKS_IN_WIN_GRP);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4I_FILL_RANKS_IN_WIN_GRP);
+    MPIR_FUNC_VERBOSE_RMA_ENTER(MPID_STATE_MPIDI_CH4I_FILL_RANKS_IN_WIN_GRP);
 
-    ranks_in_grp = (int *) MPL_malloc(group_ptr->size * sizeof(int));
+    ranks_in_grp = (int *) MPL_malloc(group_ptr->size * sizeof(int), MPL_MEM_RMA);
     MPIR_Assert(ranks_in_grp);
     for (i = 0; i < group_ptr->size; i++)
         ranks_in_grp[i] = i;
@@ -185,37 +286,14 @@ static inline int MPIDI_CH4I_fill_ranks_in_win_grp(MPIR_Win * win_ptr, MPIR_Grou
     if (mpi_errno != MPI_SUCCESS)
         MPIR_ERR_POP(mpi_errno);
 
+  fn_exit:
     MPL_free(ranks_in_grp);
 
-  fn_exit:
-    MPIR_FUNC_VERBOSE_RMA_EXIT(MPID_STATE_CH4I_FILL_RANKS_IN_WIN_GRP);
+    MPIR_FUNC_VERBOSE_RMA_EXIT(MPID_STATE_MPIDI_CH4I_FILL_RANKS_IN_WIN_GRP);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
 }
-
-#undef FUNCNAME
-#define FUNCNAME MPIDI_CH4I_progress_win_fence
-#undef FCNAME
-#define FCNAME MPL_QUOTE(FUNCNAME)
-static inline int MPIDI_CH4I_progress_win_fence(MPIR_Win * win)
-{
-    int mpi_errno = MPI_SUCCESS;
-
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4_PROGRESS_WIN_FENCE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4_PROGRESS_WIN_FENCE);
-
-    do {
-        MPIDI_CH4R_PROGRESS();
-    } while (OPA_load_int(&MPIDI_CH4U_WIN(win, outstanding_ops)) != 0);
-
-  fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4_PROGRESS_WIN_FENCE);
-    return mpi_errno;
-  fn_fail:
-    goto fn_exit;
-}
-
 
 #undef FUNCNAME
 #define FUNCNAME MPIDI_CH4R_mpi_win_start
@@ -225,23 +303,27 @@ static inline int MPIDI_CH4R_mpi_win_start(MPIR_Group * group, int assert, MPIR_
 {
     int mpi_errno = MPI_SUCCESS;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4U_WIN_START);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4U_WIN_START);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_START);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_START);
 
-    MPIDI_CH4U_EPOCH_CHECK_TYPE(win, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_ACCESS_EPOCH_CHECK_NONE(win, mpi_errno, goto fn_fail);
 
     MPIR_Group_add_ref(group);
+    if (assert & MPI_MODE_NOCHECK) {
+        goto no_check;
+    }
 
     MPIDI_CH4R_PROGRESS_WHILE(group->size != (int) MPIDI_CH4U_WIN(win, sync).pw.count);
+  no_check:
     MPIDI_CH4U_WIN(win, sync).pw.count = 0;
 
     MPIR_ERR_CHKANDJUMP((MPIDI_CH4U_WIN(win, sync).sc.group != NULL),
                         mpi_errno, MPI_ERR_GROUP, "**group");
     MPIDI_CH4U_WIN(win, sync).sc.group = group;
-    MPIDI_CH4U_WIN(win, sync).origin_epoch_type = MPIDI_CH4U_EPOTYPE_START;
+    MPIDI_CH4U_WIN(win, sync).access_epoch_type = MPIDI_CH4U_EPOTYPE_START;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4U_WIN_START);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_START);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -257,16 +339,13 @@ static inline int MPIDI_CH4R_mpi_win_complete(MPIR_Win * win)
     MPIDI_CH4U_win_cntrl_msg_t msg;
     int index, peer;
     MPIR_Group *group;
-    int *ranks_in_win_grp;
+    int *ranks_in_win_grp = NULL;
+    int all_local_completed = 0;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4U_WIN_COMPLETE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4U_WIN_COMPLETE);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_COMPLETE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_COMPLETE);
 
-    MPIDI_CH4U_EPOCH_START_CHECK2(win, mpi_errno, goto fn_fail);
-
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    MPIDI_CH4U_ACCESS_EPOCH_CHECK(win, MPIDI_CH4U_EPOTYPE_START, mpi_errno, return mpi_errno);
 
     group = MPIDI_CH4U_WIN(win, sync).sc.group;
     MPIR_Assert(group != NULL);
@@ -274,28 +353,39 @@ static inline int MPIDI_CH4R_mpi_win_complete(MPIR_Win * win)
     msg.win_id = MPIDI_CH4U_WIN(win, win_id);
     msg.origin_rank = win->comm_ptr->rank;
 
-    ranks_in_win_grp = (int *) MPL_malloc(sizeof(int) * group->size);
+    ranks_in_win_grp = (int *) MPL_malloc(sizeof(int) * group->size, MPL_MEM_RMA);
     MPIR_Assert(ranks_in_win_grp);
 
     mpi_errno = MPIDI_CH4I_fill_ranks_in_win_grp(win, group, ranks_in_win_grp);
     if (mpi_errno != MPI_SUCCESS)
         MPIR_ERR_POP(mpi_errno);
 
+    /* FIXME: now we simply set per-target counters for PSCW, can it be optimized ? */
+    do {
+        MPIDI_CH4R_PROGRESS();
+        MPIDI_win_check_group_local_completed(win, ranks_in_win_grp, group->size,
+                                              &all_local_completed);
+    } while (all_local_completed != 1);
+
     for (index = 0; index < group->size; ++index) {
         peer = ranks_in_win_grp[index];
         mpi_errno = MPIDI_NM_am_send_hdr(peer, win->comm_ptr,
-                                         MPIDI_CH4U_WIN_COMPLETE, &msg, sizeof(msg), NULL);
+                                         MPIDI_CH4U_WIN_COMPLETE, &msg, sizeof(msg));
         if (mpi_errno != MPI_SUCCESS)
             MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_RMA_SYNC, goto fn_fail, "**rmasync");
     }
 
-    MPL_free(ranks_in_win_grp);
-    MPIDI_CH4U_EPOCH_TARGET_EVENT(win);
+    /* In performance-efficient mode, all allocated targets are freed at win_finalize. */
+    if (MPIR_CVAR_CH4_RMA_MEM_EFFICIENT)
+        MPIDI_CH4U_win_target_cleanall(win);
+    MPIDI_CH4U_WIN(win, sync).access_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
     MPIR_Group_release(MPIDI_CH4U_WIN(win, sync).sc.group);
     MPIDI_CH4U_WIN(win, sync).sc.group = NULL;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4U_WIN_COMPLETE);
+    MPL_free(ranks_in_win_grp);
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_COMPLETE);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -310,12 +400,12 @@ static inline int MPIDI_CH4R_mpi_win_post(MPIR_Group * group, int assert, MPIR_W
     int mpi_errno = MPI_SUCCESS;
     MPIDI_CH4U_win_cntrl_msg_t msg;
     int index, peer;
-    int *ranks_in_win_grp;
+    int *ranks_in_win_grp = NULL;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4U_WIN_POST);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4U_WIN_POST);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_POST);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_POST);
 
-    MPIDI_CH4U_EPOCH_POST_CHECK(win, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_EXPOSURE_EPOCH_CHECK_NONE(win, mpi_errno, goto fn_fail);
 
     MPIR_Group_add_ref(group);
     MPIR_ERR_CHKANDJUMP((MPIDI_CH4U_WIN(win, sync).pw.group != NULL),
@@ -323,11 +413,14 @@ static inline int MPIDI_CH4R_mpi_win_post(MPIR_Group * group, int assert, MPIR_W
 
     MPIDI_CH4U_WIN(win, sync).pw.group = group;
     MPIR_Assert(group != NULL);
+    if (assert & MPI_MODE_NOCHECK) {
+        goto no_check;
+    }
 
     msg.win_id = MPIDI_CH4U_WIN(win, win_id);
     msg.origin_rank = win->comm_ptr->rank;
 
-    ranks_in_win_grp = (int *) MPL_malloc(sizeof(int) * group->size);
+    ranks_in_win_grp = (int *) MPL_malloc(sizeof(int) * group->size, MPL_MEM_RMA);
     MPIR_Assert(ranks_in_win_grp);
 
     mpi_errno = MPIDI_CH4I_fill_ranks_in_win_grp(win, group, ranks_in_win_grp);
@@ -337,15 +430,17 @@ static inline int MPIDI_CH4R_mpi_win_post(MPIR_Group * group, int assert, MPIR_W
     for (index = 0; index < group->size; ++index) {
         peer = ranks_in_win_grp[index];
         mpi_errno = MPIDI_NM_am_send_hdr(peer, win->comm_ptr,
-                                         MPIDI_CH4U_WIN_POST, &msg, sizeof(msg), NULL);
+                                         MPIDI_CH4U_WIN_POST, &msg, sizeof(msg));
         if (mpi_errno != MPI_SUCCESS)
             MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_RMA_SYNC, goto fn_fail, "**rmasync");
     }
 
-    MPL_free(ranks_in_win_grp);
-    MPIDI_CH4U_WIN(win, sync).target_epoch_type = MPIDI_CH4U_EPOTYPE_POST;
+  no_check:
+    MPIDI_CH4U_WIN(win, sync).exposure_epoch_type = MPIDI_CH4U_EPOTYPE_POST;
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4U_WIN_POST);
+    MPL_free(ranks_in_win_grp);
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_POST);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -360,20 +455,20 @@ static inline int MPIDI_CH4R_mpi_win_wait(MPIR_Win * win)
     int mpi_errno = MPI_SUCCESS;
     MPIR_Group *group;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_WAIT);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_WAIT);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_WAIT);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_WAIT);
 
-    MPIDI_CH4U_EPOCH_TARGET_CHECK(win, MPIDI_CH4U_EPOTYPE_POST, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_EXPOSURE_EPOCH_CHECK(win, MPIDI_CH4U_EPOTYPE_POST, mpi_errno, goto fn_fail);
     group = MPIDI_CH4U_WIN(win, sync).pw.group;
     MPIDI_CH4R_PROGRESS_WHILE(group->size != (int) MPIDI_CH4U_WIN(win, sync).sc.count);
 
     MPIDI_CH4U_WIN(win, sync).sc.count = 0;
     MPIDI_CH4U_WIN(win, sync).pw.group = NULL;
     MPIR_Group_release(group);
-    MPIDI_CH4U_EPOCH_ORIGIN_EVENT(win);
+    MPIDI_CH4U_WIN(win, sync).exposure_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_WAIT);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_WAIT);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -387,10 +482,10 @@ static inline int MPIDI_CH4R_mpi_win_test(MPIR_Win * win, int *flag)
 {
     int mpi_errno = MPI_SUCCESS;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_TEST);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_TEST);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_TEST);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_TEST);
 
-    MPIDI_CH4U_EPOCH_TARGET_CHECK(win, MPIDI_CH4U_EPOTYPE_POST, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_EXPOSURE_EPOCH_CHECK(win, MPIDI_CH4U_EPOTYPE_POST, mpi_errno, goto fn_fail);
 
     MPIR_Group *group;
     group = MPIDI_CH4U_WIN(win, sync).pw.group;
@@ -400,7 +495,7 @@ static inline int MPIDI_CH4R_mpi_win_test(MPIR_Win * win, int *flag)
         MPIDI_CH4U_WIN(win, sync).pw.group = NULL;
         *flag = 1;
         MPIR_Group_release(group);
-        MPIDI_CH4U_EPOCH_ORIGIN_EVENT(win);
+        MPIDI_CH4U_WIN(win, sync).exposure_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
     }
     else {
         MPIDI_CH4R_PROGRESS();
@@ -408,7 +503,7 @@ static inline int MPIDI_CH4R_mpi_win_test(MPIR_Win * win, int *flag)
     }
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_TEST);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_TEST);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -422,32 +517,44 @@ static inline int MPIDI_CH4R_mpi_win_lock(int lock_type, int rank, int assert, M
 {
     int mpi_errno = MPI_SUCCESS;
     unsigned locked;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_LOCK);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_LOCK);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_LOCK);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_LOCK);
 
-    MPIDI_CH4U_win_sync_lock *slock = &MPIDI_CH4U_WIN(win, sync).lock;
     if (rank == MPI_PROC_NULL)
         goto fn_exit0;
 
-    MPIDI_CH4U_EPOCH_CHECK_TYPE(win, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_LOCK_EPOCH_CHECK_NONE(win, rank, mpi_errno, goto fn_fail);
+
+    MPIDI_CH4U_win_target_t *target_ptr = MPIDI_CH4U_win_target_get(win, rank);
+
+    MPIDI_CH4U_win_target_sync_lock_t *slock = &target_ptr->sync.lock;
+    MPIR_Assert(slock->locked == 0);
+    if (assert & MPI_MODE_NOCHECK) {
+        target_ptr->sync.assert_mode |= MPI_MODE_NOCHECK;
+        slock->locked = 1;
+        goto no_check;
+    }
 
     MPIDI_CH4U_win_cntrl_msg_t msg;
     msg.win_id = MPIDI_CH4U_WIN(win, win_id);
     msg.origin_rank = win->comm_ptr->rank;
     msg.lock_type = lock_type;
 
-    locked = slock->remote.locked + 1;
-    mpi_errno = MPIDI_NM_am_send_hdr(rank, win->comm_ptr,
-                                     MPIDI_CH4U_WIN_LOCK, &msg, sizeof(msg), NULL);
+    locked = slock->locked + 1;
+    mpi_errno = MPIDI_NM_am_send_hdr(rank, win->comm_ptr, MPIDI_CH4U_WIN_LOCK, &msg, sizeof(msg));
     if (mpi_errno != MPI_SUCCESS)
         MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_RMA_SYNC, goto fn_fail, "**rmasync");
-    MPIDI_CH4R_PROGRESS_WHILE(slock->remote.locked != locked);
+
+    MPIDI_CH4R_PROGRESS_WHILE(slock->locked != locked);
+  no_check:
+    target_ptr->sync.access_epoch_type = MPIDI_CH4U_EPOTYPE_LOCK;
 
   fn_exit0:
-    MPIDI_CH4U_WIN(win, sync).origin_epoch_type = MPIDI_CH4U_EPOTYPE_LOCK;
+    MPIDI_CH4U_WIN(win, sync).access_epoch_type = MPIDI_CH4U_EPOTYPE_LOCK;
+    MPIDI_CH4U_WIN(win, sync).lock.count++;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_LOCK);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_LOCK);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -463,36 +570,59 @@ static inline int MPIDI_CH4R_mpi_win_unlock(int rank, MPIR_Win * win)
     unsigned unlocked;
     MPIDI_CH4U_win_cntrl_msg_t msg;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_UNLOCK);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_UNLOCK);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_UNLOCK);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_UNLOCK);
+
+    /* Check window lock epoch.
+     * PROC_NULL does not update per-target epoch. */
+    MPIDI_CH4U_ACCESS_EPOCH_CHECK(win, MPIDI_CH4U_EPOTYPE_LOCK, mpi_errno, return mpi_errno);
     if (rank == MPI_PROC_NULL)
         goto fn_exit0;
 
-    MPIDI_CH4U_EPOCH_ORIGIN_CHECK(win, MPIDI_CH4U_EPOTYPE_LOCK, mpi_errno, return mpi_errno);
+    MPIDI_CH4U_win_target_t *target_ptr = MPIDI_CH4U_win_target_find(win, rank);
+    MPIR_Assert(target_ptr);
 
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    /* Check per-target lock epoch */
+    MPIDI_CH4U_EPOCH_CHECK_TARGET_LOCK(target_ptr, mpi_errno, return mpi_errno);
+
+    MPIDI_CH4U_win_target_sync_lock_t *slock = &target_ptr->sync.lock;
+    /* NOTE: lock blocking waits till granted */
+    MPIR_Assert(slock->locked == 1);
+
+    do {
+        MPIDI_CH4R_PROGRESS();
+    } while (MPIR_cc_get(target_ptr->remote_cmpl_cnts) != 0);
+
+    if (target_ptr->sync.assert_mode & MPI_MODE_NOCHECK) {
+        target_ptr->sync.lock.locked = 0;
+        goto no_check;
+    }
 
     msg.win_id = MPIDI_CH4U_WIN(win, win_id);
     msg.origin_rank = win->comm_ptr->rank;
-    unlocked = MPIDI_CH4U_WIN(win, sync).lock.remote.locked - 1;
+    unlocked = slock->locked - 1;
 
-    mpi_errno = MPIDI_NM_am_send_hdr(rank, win->comm_ptr,
-                                     MPIDI_CH4U_WIN_UNLOCK, &msg, sizeof(msg), NULL);
+    mpi_errno = MPIDI_NM_am_send_hdr(rank, win->comm_ptr, MPIDI_CH4U_WIN_UNLOCK, &msg, sizeof(msg));
     if (mpi_errno != MPI_SUCCESS)
         MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_RMA_SYNC, goto fn_fail, "**rmasync");
 
-    MPIDI_CH4R_PROGRESS_WHILE(MPIDI_CH4U_WIN(win, sync).lock.remote.locked != unlocked);
-  fn_exit0:
+    MPIDI_CH4R_PROGRESS_WHILE(slock->locked != unlocked);
+  no_check:
+    /* In performance-efficient mode, all allocated targets are freed at win_finalize. */
+    if (MPIR_CVAR_CH4_RMA_MEM_EFFICIENT)
+        MPIDI_CH4U_win_target_delete(win, target_ptr);
 
-    if (!MPIDI_CH4U_WIN(win, sync).lock.remote.locked) {
-        MPIDI_CH4U_WIN(win, sync).origin_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
-        MPIDI_CH4U_WIN(win, sync).target_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
+  fn_exit0:
+    MPIR_Assert(MPIDI_CH4U_WIN(win, sync).lock.count > 0);
+    MPIDI_CH4U_WIN(win, sync).lock.count--;
+
+    /* Reset window epoch only when all per-target lock epochs are closed. */
+    if (MPIDI_CH4U_WIN(win, sync).lock.count == 0) {
+        MPIDI_CH4U_WIN(win, sync).access_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
     }
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_UNLOCK);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_UNLOCK);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -506,8 +636,8 @@ static inline int MPIDI_CH4R_mpi_win_unlock(int rank, MPIR_Win * win)
 static inline int MPIDI_CH4R_mpi_win_get_info(MPIR_Win * win, MPIR_Info ** info_p_p)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_GET_INFO);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_GET_INFO);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_GET_INFO);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_GET_INFO);
 
     mpi_errno = MPIR_Info_alloc(info_p_p);
     MPIR_Assert(mpi_errno == MPI_SUCCESS);
@@ -524,8 +654,10 @@ static inline int MPIDI_CH4R_mpi_win_get_info(MPIR_Win * win, MPIR_Info ** info_
         char buf[BUFSIZE];
         int c = 0;
 
+        CH4_COMPILE_TIME_ASSERT(BUFSIZE >= 16); /* maximum: strlen("rar,raw,war,waw") + 1 */
+
         if (MPIDI_CH4U_WIN(win, info_args).accumulate_ordering & MPIDI_CH4I_ACCU_ORDER_RAR)
-            c += snprintf(buf + c, BUFSIZE - c, "%srar", (c > 0) ? "," : "");
+            c += snprintf(buf, BUFSIZE, "rar");
 
         if (MPIDI_CH4U_WIN(win, info_args).accumulate_ordering & MPIDI_CH4I_ACCU_ORDER_RAW)
             c += snprintf(buf + c, BUFSIZE - c, "%sraw", (c > 0) ? "," : "");
@@ -537,10 +669,10 @@ static inline int MPIDI_CH4R_mpi_win_get_info(MPIR_Win * win, MPIR_Info ** info_
             c += snprintf(buf + c, BUFSIZE - c, "%swaw", (c > 0) ? "," : "");
 
         if (c == 0) {
-            memcpy(&buf[0], "not set   ", 10);
+            strncpy(buf, "none", BUFSIZE);
         }
 
-        MPIR_Info_set_impl(*info_p_p, "accumulate_ordering", buf);
+        mpi_errno = MPIR_Info_set_impl(*info_p_p, "accumulate_ordering", buf);
         MPIR_Assert(mpi_errno == MPI_SUCCESS);
 #undef BUFSIZE
     }
@@ -552,24 +684,28 @@ static inline int MPIDI_CH4R_mpi_win_get_info(MPIR_Win * win, MPIR_Info ** info_
 
     MPIR_Assert(mpi_errno == MPI_SUCCESS);
 
-    if (win->create_flavor == MPI_WIN_FLAVOR_SHARED) {
-        if (MPIDI_CH4U_WIN(win, info_args).alloc_shared_noncontig)
-            mpi_errno = MPIR_Info_set_impl(*info_p_p, "alloc_shared_noncontig", "true");
-        else
-            mpi_errno = MPIR_Info_set_impl(*info_p_p, "alloc_shared_noncontig", "false");
+    if (MPIDI_CH4U_WIN(win, info_args).alloc_shared_noncontig)
+        mpi_errno = MPIR_Info_set_impl(*info_p_p, "alloc_shared_noncontig", "true");
+    else
+        mpi_errno = MPIR_Info_set_impl(*info_p_p, "alloc_shared_noncontig", "false");
 
-        MPIR_Assert(mpi_errno == MPI_SUCCESS);
-    }
-    else if (win->create_flavor == MPI_WIN_FLAVOR_ALLOCATE) {
-        if (MPIDI_CH4U_WIN(win, info_args).same_size)
-            mpi_errno = MPIR_Info_set_impl(*info_p_p, "same_size", "true");
-        else
-            mpi_errno = MPIR_Info_set_impl(*info_p_p, "same_size", "false");
+    MPIR_Assert(mpi_errno == MPI_SUCCESS);
 
-        MPIR_Assert(mpi_errno == MPI_SUCCESS);
-    }
+    if (MPIDI_CH4U_WIN(win, info_args).same_size)
+        mpi_errno = MPIR_Info_set_impl(*info_p_p, "same_size", "true");
+    else
+        mpi_errno = MPIR_Info_set_impl(*info_p_p, "same_size", "false");
 
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_GET_INFO);
+    MPIR_Assert(mpi_errno == MPI_SUCCESS);
+
+    if (MPIDI_CH4U_WIN(win, info_args).same_disp_unit)
+        mpi_errno = MPIR_Info_set_impl(*info_p_p, "same_disp_unit", "true");
+    else
+        mpi_errno = MPIR_Info_set_impl(*info_p_p, "same_disp_unit", "false");
+
+    MPIR_Assert(mpi_errno == MPI_SUCCESS);
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_GET_INFO);
     return mpi_errno;
 }
 
@@ -580,29 +716,49 @@ static inline int MPIDI_CH4R_mpi_win_get_info(MPIR_Win * win, MPIR_Info ** info_
 static inline int MPIDI_CH4R_win_finalize(MPIR_Win ** win_ptr)
 {
     int mpi_errno = MPI_SUCCESS;
+    int all_completed = 0;
     MPIR_Win *win = *win_ptr;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_FINALIZE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_FINALIZE);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_WIN_FINALIZE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_WIN_FINALIZE);
+
+    /* All local outstanding OPs should have been completed. */
+    MPIR_Assert(MPIR_cc_get(MPIDI_CH4U_WIN(win, local_cmpl_cnts)) == 0);
+    MPIR_Assert(MPIR_cc_get(MPIDI_CH4U_WIN(win, remote_cmpl_cnts)) == 0);
+
+    /* Make progress till all OPs have been completed */
+    do {
+        int all_local_completed = 0, all_remote_completed = 0;
+
+        MPIDI_CH4R_PROGRESS();
+
+        MPIDI_win_check_all_targets_local_completed(win, &all_local_completed);
+        MPIDI_win_check_all_targets_remote_completed(win, &all_remote_completed);
+
+        /* Local completion counter might be updated later than remote completion
+         * (at request completion), so we need to check it before release entire
+         * window. */
+        all_completed = (MPIR_cc_get(MPIDI_CH4U_WIN(win, local_cmpl_cnts)) == 0) &&
+            (MPIR_cc_get(MPIDI_CH4U_WIN(win, remote_cmpl_cnts)) == 0) &&
+            all_local_completed && all_remote_completed;
+    } while (all_completed != 1);
+
+    MPIDI_CH4U_win_target_cleanall(win);
+    MPIDI_CH4U_win_hash_clear(win);
 
     if (win->create_flavor == MPI_WIN_FLAVOR_ALLOCATE && win->base) {
         if (MPIDI_CH4U_WIN(win, mmap_sz) > 0)
-            munmap(MPIDI_CH4U_WIN(win, mmap_addr), MPIDI_CH4U_WIN(win, mmap_sz));
+            MPL_munmap(MPIDI_CH4U_WIN(win, mmap_addr), MPIDI_CH4U_WIN(win, mmap_sz), MPL_MEM_RMA);
         else if (MPIDI_CH4U_WIN(win, mmap_sz) == -1)
             MPL_free(win->base);
     }
 
     if (win->create_flavor == MPI_WIN_FLAVOR_SHARED) {
         if (MPIDI_CH4U_WIN(win, mmap_addr))
-            munmap(MPIDI_CH4U_WIN(win, mmap_addr), MPIDI_CH4U_WIN(win, mmap_sz));
+            MPL_munmap(MPIDI_CH4U_WIN(win, mmap_addr), MPIDI_CH4U_WIN(win, mmap_sz), MPL_MEM_RMA);
         MPL_free(MPIDI_CH4U_WIN(win, sizes));
     }
 
-    if (MPIDI_CH4U_WIN(win, lockQ)) {
-        MPL_free(MPIDI_CH4U_WIN(win, lockQ));
-        MPIDI_CH4U_WIN(win, lockQ) = NULL;
-    }
-
-    MPL_HASH_DELETE(dev.ch4u.hash_handle, MPIDI_CH4_Global.win_hash, win);
+    MPIDI_CH4U_map_erase(MPIDI_CH4_Global.win_map, MPIDI_CH4U_WIN(win, win_id));
 
     if (win->create_flavor == MPI_WIN_FLAVOR_SHARED) {
         MPL_free(MPIDI_CH4U_WIN(win, shared_table));
@@ -611,8 +767,11 @@ static inline int MPIDI_CH4R_win_finalize(MPIR_Win ** win_ptr)
     MPIR_Comm_release(win->comm_ptr);
     MPIR_Handle_obj_free(&MPIR_Win_mem, win);
 
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_FINALIZE);
+  fn_exit:
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_WIN_FINALIZE);
     return mpi_errno;
+  fn_fail:
+    goto fn_exit;
 }
 
 #undef FUNCNAME
@@ -624,17 +783,19 @@ static inline int MPIDI_CH4R_mpi_win_free(MPIR_Win ** win_ptr)
     int mpi_errno = MPI_SUCCESS;
     MPIR_Errflag_t errflag = MPIR_ERR_NONE;
     MPIR_Win *win = *win_ptr;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_FREE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_FREE);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_FREE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_FREE);
 
-    MPIDI_CH4U_EPOCH_FREE_CHECK(win, mpi_errno, goto fn_fail);
-    mpi_errno = MPIR_Barrier_impl(win->comm_ptr, &errflag);
+    MPIDI_CH4U_ACCESS_EPOCH_CHECK_NONE(win, mpi_errno, return mpi_errno);
+    MPIDI_CH4U_EXPOSURE_EPOCH_CHECK_NONE(win, mpi_errno, return mpi_errno);
+
+    mpi_errno = MPID_Barrier(win->comm_ptr, &errflag);
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
 
     MPIDI_CH4R_win_finalize(win_ptr);
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_FREE);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_FREE);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -648,13 +809,13 @@ static inline int MPIDI_CH4R_mpi_win_fence(int massert, MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
     MPIR_Errflag_t errflag = MPIR_ERR_NONE;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_FENCE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_FENCE);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_FENCE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_FENCE);
 
-    MPIDI_CH4U_EPOCH_FENCE_CHECK(win, mpi_errno, goto fn_fail);
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    MPIDI_CH4U_FENCE_EPOCH_CHECK(win, mpi_errno, goto fn_fail);
+    do {
+        MPIDI_CH4R_PROGRESS();
+    } while (MPIR_cc_get(MPIDI_CH4U_WIN(win, local_cmpl_cnts)) != 0);
     MPIDI_CH4U_EPOCH_FENCE_EVENT(win, massert);
 
     /*
@@ -669,10 +830,10 @@ static inline int MPIDI_CH4R_mpi_win_fence(int massert, MPIR_Win * win)
      * MPI_Win_fence(MODE_NOPRECEDE)   MPI_Win_fence(MODE_NOPRECEDE)
      * MPI_Get(from rank 1)
      */
-    mpi_errno = MPIR_Barrier_impl(win->comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(win->comm_ptr, &errflag);
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_FENCE);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_FENCE);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -692,8 +853,8 @@ static inline int MPIDI_CH4R_mpi_win_create(void *base,
     MPIR_Errflag_t errflag = MPIR_ERR_NONE;
     MPIR_Win *win;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_CREATE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_CREATE);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_CREATE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_CREATE);
 
     mpi_errno = MPIDI_CH4R_win_init(length,
                                     disp_unit,
@@ -706,13 +867,13 @@ static inline int MPIDI_CH4R_mpi_win_create(void *base,
     win = *win_ptr;
     win->base = base;
 
-    mpi_errno = MPIR_Barrier_impl(comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(win->comm_ptr, &errflag);
 
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_CREATE);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_CREATE);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -725,13 +886,13 @@ static inline int MPIDI_CH4R_mpi_win_create(void *base,
 static inline int MPIDI_CH4R_mpi_win_attach(MPIR_Win * win, void *base, MPI_Aint size)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_ATTACH);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_ATTACH);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_ATTACH);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_ATTACH);
 
     MPIR_ERR_CHKANDSTMT((win->create_flavor != MPI_WIN_FLAVOR_DYNAMIC), mpi_errno,
                         MPI_ERR_RMA_FLAVOR, goto fn_fail, "**rmaflavor");
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_ATTACH);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_ATTACH);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -747,35 +908,37 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
                                                      MPIR_Comm * comm_ptr,
                                                      void **base_ptr, MPIR_Win ** win_ptr)
 {
-    int i = 0, fd = -1, rc, first = 0, mpi_errno = MPI_SUCCESS;
+    int i = 0, fd = -1, rc, first = 0, mpi_errno = MPI_SUCCESS, shm_key_size;
     MPIR_Errflag_t errflag = MPIR_ERR_NONE;
     void *baseP = NULL;
     MPIR_Win *win = NULL;
     ssize_t total_size = 0LL;
     MPI_Aint size_out = 0;
     MPIDI_CH4U_win_shared_info_t *shared_table = NULL;
-    char shm_key[64];
+    char *shm_key = NULL;
     void *map_ptr;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_ALLOCATE_SHARED);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_ALLOCATE_SHARED);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_ALLOCATE_SHARED);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_ALLOCATE_SHARED);
 
     mpi_errno = MPIDI_CH4R_win_init(size, disp_unit, win_ptr, info_ptr, comm_ptr,
                                     MPI_WIN_FLAVOR_SHARED, MPI_WIN_UNIFIED);
 
     win = *win_ptr;
+    MPIR_T_PVAR_TIMER_START(RMA, rma_wincreate_allgather);
     MPIDI_CH4U_WIN(win, shared_table) =
         (MPIDI_CH4U_win_shared_info_t *) MPL_malloc(sizeof(MPIDI_CH4U_win_shared_info_t) *
-                                                    comm_ptr->local_size);
+                                                    comm_ptr->local_size, MPL_MEM_RMA);
     shared_table = MPIDI_CH4U_WIN(win, shared_table);
     shared_table[comm_ptr->rank].size = size;
     shared_table[comm_ptr->rank].disp_unit = disp_unit;
 
-    mpi_errno = MPIR_Allgather_impl(MPI_IN_PLACE,
-                                    0,
-                                    MPI_DATATYPE_NULL,
-                                    shared_table,
-                                    sizeof(MPIDI_CH4U_win_shared_info_t),
-                                    MPI_BYTE, comm_ptr, &errflag);
+    mpi_errno = MPID_Allgather(MPI_IN_PLACE,
+                               0,
+                               MPI_DATATYPE_NULL,
+                               shared_table,
+                               sizeof(MPIDI_CH4U_win_shared_info_t),
+                               MPI_BYTE, comm_ptr, &errflag);
+    MPIR_T_PVAR_TIMER_END(RMA, rma_wincreate_allgather);
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
 
@@ -789,7 +952,26 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
     if (total_size == 0)
         goto fn_zero;
 
-    sprintf(shm_key, "/mpi-%X-%" PRIx64, MPIDI_CH4_Global.jobid, MPIDI_CH4U_WIN(win, win_id));
+    /* Note that two distinct process groups may share the same context id,
+     * thus the window id may be duplicated on a node if windows are owned
+     * by distinct process groups. Therefore, we use [jobid + root_rank + win_id]
+     * as unique shm_key for window, where root_rank is the world rank of the
+     * first process in the group. */
+    int root_rank = 0;
+
+    if (comm_ptr->rank == 0)
+        root_rank = MPIR_Process.comm_world->rank;
+    mpi_errno = MPID_Bcast(&root_rank, 1, MPI_INT, 0, comm_ptr, &errflag);
+    if (mpi_errno != MPI_SUCCESS)
+        goto fn_fail;
+
+    shm_key = (char *) MPL_malloc(sizeof(char), MPL_MEM_SHM);
+    shm_key_size = snprintf(shm_key, 1, "/mpi-%s-%X-%" PRIx64,
+                            MPIDI_CH4_Global.jobid, root_rank, MPIDI_CH4U_WIN(win, win_id));
+    shm_key = (char *) MPL_realloc(shm_key, shm_key_size, MPL_MEM_SHM);
+    MPIR_Assert(shm_key);
+    snprintf(shm_key, shm_key_size, "/mpi-%s-%X-%" PRIx64,
+             MPIDI_CH4_Global.jobid, root_rank, MPIDI_CH4U_WIN(win, win_id));
 
     rc = shm_open(shm_key, O_CREAT | O_EXCL | O_RDWR, 0600);
     first = (rc != -1);
@@ -819,51 +1001,74 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
         MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_NO_MEM, goto fn_fail, "**nomem");
     }
 
-    if (comm_ptr->rank == 0) {
-        map_ptr = MPIDI_CH4R_generate_random_addr(mapsize);
-        map_ptr = mmap(map_ptr, mapsize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, fd, 0);
+    int iter = MPIR_CVAR_CH4_SHM_SYMHEAP_RETRY;
+    unsigned anyfail = 1;
 
-        if (map_ptr == NULL || map_ptr == MAP_FAILED) {
-            close(fd);
+    while (anyfail && --iter > 0) {
+        if (comm_ptr->rank == 0) {
+            int map_flags = MAP_SHARED;
 
-            if (first)
-                shm_unlink(shm_key);
+            map_ptr = MPIDI_CH4R_generate_random_addr(mapsize);
+#ifdef USE_SYM_HEAP
+            if (MPIDI_CH4R_is_valid_mapaddr(map_ptr))
+                map_flags |= MAP_FIXED; /* Set fixed only when generated a valid address.
+                                         * Otherwise we allow system to pick up one. */
+#endif
+            map_ptr = mmap(map_ptr, mapsize, PROT_READ | PROT_WRITE, map_flags, fd, 0);
+            if (map_ptr == NULL || map_ptr == MAP_FAILED) {
+                close(fd);
 
-            MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_NO_MEM, goto fn_fail, "**nomem");
+                if (first)
+                    shm_unlink(shm_key);
+
+                MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_NO_MEM, goto fn_fail, "**nomem");
+            }
         }
 
-        mpi_errno = MPIR_Bcast_impl(&map_ptr, 1, MPI_UNSIGNED_LONG, 0, comm_ptr, &errflag);
+        mpi_errno = MPID_Bcast(&map_ptr, 1, MPI_UNSIGNED_LONG, 0, comm_ptr, &errflag);
 
         if (mpi_errno != MPI_SUCCESS)
             goto fn_fail;
 
-        MPIDI_CH4U_WIN(win, mmap_addr) = map_ptr;
-        MPIDI_CH4U_WIN(win, mmap_sz) = mapsize;
-    }
-    else {
-        mpi_errno = MPIR_Bcast_impl(&map_ptr, 1, MPI_UNSIGNED_LONG, 0, comm_ptr, &errflag);
+        unsigned map_fail = 0;
+        if (comm_ptr->rank != 0) {
+            int map_flags = MAP_SHARED;
 
+#ifdef USE_SYM_HEAP
+            rc = MPIDI_CH4R_check_maprange_ok(map_ptr, mapsize);
+            map_fail = (rc == 1) ? 0 : 1;
+            map_flags |= MAP_FIXED;     /* Set fixed only when symmetric heap is enabled. */
+#endif
+
+            if (map_fail == 0) {
+                map_ptr = mmap(map_ptr, mapsize, PROT_READ | PROT_WRITE, map_flags, fd, 0);
+                if (map_ptr == NULL || map_ptr == MAP_FAILED)
+                    map_fail = 1;
+            }
+        }
+
+        /* If any local process fails to sync range or mmap, then try more
+         * addresses on rank 0. */
+        mpi_errno = MPID_Allreduce(&map_fail,
+                                   &anyfail, 1, MPI_UNSIGNED, MPI_BOR, comm_ptr, &errflag);
         if (mpi_errno != MPI_SUCCESS)
             goto fn_fail;
 
-        rc = MPIDI_CH4R_check_maprange_ok(map_ptr, mapsize);
-        /* If we hit this assert, we need to iterate
-         * trying more addresses
-         */
-        MPIR_Assert(rc == 1);
-        map_ptr = mmap(map_ptr, mapsize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, fd, 0);
-        MPIDI_CH4U_WIN(win, mmap_addr) = map_ptr;
-        MPIDI_CH4U_WIN(win, mmap_sz) = mapsize;
-
-        if (map_ptr == NULL || map_ptr == MAP_FAILED) {
-            close(fd);
-
-            if (first)
-                shm_unlink(shm_key);
-
-            MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_NO_MEM, goto fn_fail, "**nomem");
-        }
+        if (anyfail && map_ptr != NULL && map_ptr != MAP_FAILED)
+            MPL_munmap(map_ptr, mapsize, MPL_MEM_RMA);
     }
+
+    if (anyfail) {      /* Still fails after retry, report error. */
+        close(fd);
+
+        if (first)
+            shm_unlink(shm_key);
+
+        MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_NO_MEM, goto fn_fail, "**nomem");
+    }
+
+    MPIDI_CH4U_WIN(win, mmap_addr) = map_ptr;
+    MPIDI_CH4U_WIN(win, mmap_sz) = mapsize;
 
     /* Scan for my offset into the buffer             */
     /* Could use exscan if this is expensive at scale */
@@ -872,12 +1077,12 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
 
   fn_zero:
 
-    baseP = (size == 0) ? NULL : (void *) ((char *) map_ptr + size_out);
+    baseP = (total_size == 0) ? NULL : (void *) ((char *) map_ptr + size_out);
     win->base = baseP;
     win->size = size;
 
     *(void **) base_ptr = (void *) win->base;
-    mpi_errno = MPIR_Barrier_impl(comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(comm_ptr, &errflag);
 
     if (fd >= 0)
         close(fd);
@@ -886,7 +1091,9 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
         shm_unlink(shm_key);
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_ALLOCATE_SHARED);
+    if (shm_key != NULL)
+        MPL_free(shm_key);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_ALLOCATE_SHARED);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -899,12 +1106,12 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
 static inline int MPIDI_CH4R_mpi_win_detach(MPIR_Win * win, const void *base)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_DETACH);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_DETACH);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_DETACH);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_DETACH);
     MPIR_ERR_CHKANDSTMT((win->create_flavor != MPI_WIN_FLAVOR_DYNAMIC), mpi_errno,
                         MPI_ERR_RMA_FLAVOR, goto fn_fail, "**rmaflavor");
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_DETACH);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_DETACH);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -923,8 +1130,8 @@ static inline int MPIDI_CH4R_mpi_win_shared_query(MPIR_Win * win,
     int offset = rank, i;
     MPIDI_CH4U_win_shared_info_t *shared_table = MPIDI_CH4U_WIN(win, shared_table);
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_SHARED_QUERY);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_SHARED_QUERY);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_SHARED_QUERY);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_SHARED_QUERY);
 
     if (rank < 0)
         offset = 0;
@@ -938,7 +1145,7 @@ static inline int MPIDI_CH4R_mpi_win_shared_query(MPIR_Win * win,
     else
         *(void **) baseptr = NULL;
 
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_SHARED_QUERY);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_SHARED_QUERY);
     return mpi_errno;
 }
 
@@ -956,8 +1163,8 @@ static inline int MPIDI_CH4R_mpi_win_allocate(MPI_Aint size,
     void *baseP;
     MPIR_Win *win;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_ALLOCATE);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_ALLOCATE);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_ALLOCATE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_ALLOCATE);
 
     mpi_errno = MPIDI_CH4R_win_init(size, disp_unit, win_ptr, info, comm,
                                     MPI_WIN_FLAVOR_ALLOCATE, MPI_WIN_UNIFIED);
@@ -974,13 +1181,13 @@ static inline int MPIDI_CH4R_mpi_win_allocate(MPI_Aint size,
     win->base = baseP;
 
     *(void **) baseptr = (void *) win->base;
-    mpi_errno = MPIR_Barrier_impl(comm, &errflag);
+    mpi_errno = MPID_Barrier(comm, &errflag);
 
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_ALLOCATE);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_ALLOCATE);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -993,16 +1200,27 @@ static inline int MPIDI_CH4R_mpi_win_allocate(MPI_Aint size,
 static inline int MPIDI_CH4R_mpi_win_flush(int rank, MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_FLUSH);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_FLUSH);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH);
 
-    MPIDI_CH4U_EPOCH_LOCK_CHECK(win, mpi_errno, goto fn_fail);
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    /* Check window lock epoch.
+     * PROC_NULL does not update per-target epoch. */
+    MPIDI_CH4U_EPOCH_CHECK_PASSIVE(win, mpi_errno, return mpi_errno);
+    if (rank == MPI_PROC_NULL)
+        goto fn_exit;
+
+    MPIDI_CH4U_win_target_t *target_ptr = MPIDI_CH4U_win_target_find(win, rank);
+    if (target_ptr) {
+        if (MPIDI_CH4U_WIN(win, sync).access_epoch_type == MPIDI_CH4U_EPOTYPE_LOCK)
+            MPIDI_CH4U_EPOCH_CHECK_TARGET_LOCK(target_ptr, mpi_errno, goto fn_fail);
+
+        do {
+            MPIDI_CH4R_PROGRESS();
+        } while (MPIR_cc_get(target_ptr->remote_cmpl_cnts) != 0);
+    }
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_FLUSH);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -1015,17 +1233,21 @@ static inline int MPIDI_CH4R_mpi_win_flush(int rank, MPIR_Win * win)
 static inline int MPIDI_CH4R_mpi_win_flush_local_all(MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_FLUSH_LOCAL_ALL);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_FLUSH_LOCAL_ALL);
+    int all_local_completed = 0;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_LOCAL_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_LOCAL_ALL);
 
-    MPIDI_CH4U_EPOCH_LOCK_CHECK(win, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_EPOCH_CHECK_PASSIVE(win, mpi_errno, goto fn_fail);
 
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    /* FIXME: now we simply set per-target counters for lockall in case
+     * user flushes per target, but this should be optimized. */
+    do {
+        MPIDI_CH4R_PROGRESS();
+        MPIDI_win_check_all_targets_local_completed(win, &all_local_completed);
+    } while (all_local_completed != 1);
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_FLUSH_LOCAL_ALL);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_LOCAL_ALL);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -1038,46 +1260,48 @@ static inline int MPIDI_CH4R_mpi_win_flush_local_all(MPIR_Win * win)
 static inline int MPIDI_CH4R_mpi_win_unlock_all(MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_UNLOCK_ALL);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_UNLOCK_ALL);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_UNLOCK_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_UNLOCK_ALL);
     int i;
-    MPIDI_CH4U_win_lock_info *lockQ;
 
-    MPIDI_CH4U_EPOCH_ORIGIN_CHECK(win, MPIDI_CH4U_EPOTYPE_LOCK_ALL, mpi_errno, goto fn_exit);
+    int all_remote_completed = 0;
 
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    MPIDI_CH4U_ACCESS_EPOCH_CHECK(win, MPIDI_CH4U_EPOTYPE_LOCK_ALL, mpi_errno, return mpi_errno);
+    /* NOTE: lockall blocking waits till all locks granted */
+    MPIR_Assert(MPIDI_CH4U_WIN(win, sync).lockall.allLocked == win->comm_ptr->local_size);
 
-    MPIR_Assert(MPIDI_CH4U_WIN(win, lockQ) != NULL);
-    lockQ = (MPIDI_CH4U_win_lock_info *) MPIDI_CH4U_WIN(win, lockQ);
+    /* FIXME: now we simply set per-target counters for lockall in case
+     * user flushes per target, but this should be optimized. */
+    do {
+        MPIDI_CH4R_PROGRESS();
+        MPIDI_win_check_all_targets_remote_completed(win, &all_remote_completed);
+    } while (all_remote_completed != 1);
 
+    if (MPIDI_CH4U_WIN(win, sync).assert_mode & MPI_MODE_NOCHECK) {
+        MPIDI_CH4U_WIN(win, sync).lockall.allLocked = 0;
+        goto no_check;
+    }
     for (i = 0; i < win->comm_ptr->local_size; i++) {
-
         MPIDI_CH4U_win_cntrl_msg_t msg;
         msg.win_id = MPIDI_CH4U_WIN(win, win_id);
         msg.origin_rank = win->comm_ptr->rank;
 
-        lockQ[i].done = 0;
-        lockQ[i].peer = i;
-        lockQ[i].win = win;
-
         mpi_errno = MPIDI_NM_am_send_hdr(i, win->comm_ptr,
-                                         MPIDI_CH4U_WIN_UNLOCKALL, &msg, sizeof(msg), NULL);
+                                         MPIDI_CH4U_WIN_UNLOCKALL, &msg, sizeof(msg));
         if (mpi_errno != MPI_SUCCESS)
             MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_RMA_SYNC, goto fn_fail, "**rmasync");
-
-        if (MPIDI_CH4U_WIN(win, sync).lock.remote.allLocked == 1)
-            lockQ[i].done = 1;
     }
 
-    MPIDI_CH4R_PROGRESS_WHILE(MPIDI_CH4U_WIN(win, sync).lock.remote.allLocked);
-
-    MPIDI_CH4U_WIN(win, sync).origin_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
-    MPIDI_CH4U_WIN(win, sync).target_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
+    MPIDI_CH4R_PROGRESS_WHILE(MPIDI_CH4U_WIN(win, sync).lockall.allLocked);
+  no_check:
+    /* In performance-efficient mode, all allocated targets are freed at win_finalize. */
+    if (MPIR_CVAR_CH4_RMA_MEM_EFFICIENT)
+        MPIDI_CH4U_win_target_cleanall(win);
+    MPIDI_CH4U_WIN(win, sync).access_epoch_type = MPIDI_CH4U_EPOTYPE_NONE;
+    MPIDI_CH4U_WIN(win, sync).assert_mode = 0;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_UNLOCK_ALL);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_UNLOCK_ALL);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -1094,8 +1318,8 @@ static inline int MPIDI_CH4R_mpi_win_create_dynamic(MPIR_Info * info,
     int rc = MPI_SUCCESS;
     MPIR_Errflag_t errflag = MPIR_ERR_NONE;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_CREATE_DYNAMIC);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_CREATE_DYNAMIC);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_CREATE_DYNAMIC);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_CREATE_DYNAMIC);
 
     MPIR_Win *win;
 
@@ -1107,14 +1331,10 @@ static inline int MPIDI_CH4R_mpi_win_create_dynamic(MPIR_Info * info,
     win = *win_ptr;
     win->base = MPI_BOTTOM;
 
-
-    if (rc != MPI_SUCCESS)
-        goto fn_fail;
-
-    mpi_errno = MPIR_Barrier_impl(comm, &errflag);
+    mpi_errno = MPID_Barrier(comm, &errflag);
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_CREATE_DYNAMIC);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_CREATE_DYNAMIC);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -1127,17 +1347,27 @@ static inline int MPIDI_CH4R_mpi_win_create_dynamic(MPIR_Info * info,
 static inline int MPIDI_CH4R_mpi_win_flush_local(int rank, MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_FLUSH_LOCAL);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_FLUSH_LOCAL);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_LOCAL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_LOCAL);
 
-    MPIDI_CH4U_EPOCH_LOCK_CHECK(win, mpi_errno, goto fn_fail);
+    /* Check window lock epoch.
+     * PROC_NULL does not update per-target epoch. */
+    MPIDI_CH4U_EPOCH_CHECK_PASSIVE(win, mpi_errno, return mpi_errno);
+    if (rank == MPI_PROC_NULL)
+        goto fn_exit;
 
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    MPIDI_CH4U_win_target_t *target_ptr = MPIDI_CH4U_win_target_find(win, rank);
+    if (target_ptr) {
+        if (MPIDI_CH4U_WIN(win, sync).access_epoch_type == MPIDI_CH4U_EPOTYPE_LOCK)
+            MPIDI_CH4U_EPOCH_CHECK_TARGET_LOCK(target_ptr, mpi_errno, goto fn_fail);
+
+        do {
+            MPIDI_CH4R_PROGRESS();
+        } while (MPIR_cc_get(target_ptr->local_cmpl_cnts) != 0);
+    }
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_FLUSH_LOCAL);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_LOCAL);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -1150,14 +1380,14 @@ static inline int MPIDI_CH4R_mpi_win_flush_local(int rank, MPIR_Win * win)
 static inline int MPIDI_CH4R_mpi_win_sync(MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_SYNC);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_SYNC);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_SYNC);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_SYNC);
 
-    MPIDI_CH4U_EPOCH_LOCK_CHECK(win, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_EPOCH_CHECK_PASSIVE(win, mpi_errno, goto fn_fail);
     OPA_read_write_barrier();
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_SYNC);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_SYNC);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -1170,17 +1400,22 @@ static inline int MPIDI_CH4R_mpi_win_sync(MPIR_Win * win)
 static inline int MPIDI_CH4R_mpi_win_flush_all(MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_FLUSH_ALL);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_FLUSH_ALL);
+    int all_remote_completed = 0;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_ALL);
 
-    MPIDI_CH4U_EPOCH_LOCK_CHECK(win, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_EPOCH_CHECK_PASSIVE(win, mpi_errno, goto fn_fail);
 
-    mpi_errno = MPIDI_CH4I_progress_win_fence(win);
-    if (mpi_errno)
-        MPIR_ERR_POP(mpi_errno);
+    do {
+        MPIDI_CH4R_PROGRESS();
+
+        /* FIXME: now we simply set per-target counters for lockall in case
+         * user flushes per target, but this should be optimized. */
+        MPIDI_win_check_all_targets_remote_completed(win, &all_remote_completed);
+    } while (all_remote_completed != 1);
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_FLUSH_ALL);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_FLUSH_ALL);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -1194,49 +1429,40 @@ static inline int MPIDI_CH4R_mpi_win_lock_all(int assert, MPIR_Win * win)
 {
     int mpi_errno = MPI_SUCCESS;
 
-    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_CH4I_WIN_LOCK_ALL);
-    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_CH4I_WIN_LOCK_ALL);
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_CH4R_MPI_WIN_LOCK_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_CH4R_MPI_WIN_LOCK_ALL);
 
-    MPIDI_CH4U_EPOCH_CHECK_TYPE(win, mpi_errno, goto fn_fail);
+    MPIDI_CH4U_ACCESS_EPOCH_CHECK_NONE(win, mpi_errno, goto fn_fail);
+
+    MPIR_Assert(MPIDI_CH4U_WIN(win, sync).lockall.allLocked == 0);
 
     int size;
     size = win->comm_ptr->local_size;
-
-    if (!MPIDI_CH4U_WIN(win, lockQ)) {
-        MPIDI_CH4U_WIN(win, lockQ) =
-            (MPIDI_CH4U_win_lock_info *) MPL_calloc(size, sizeof(MPIDI_CH4U_win_lock_info));
-        MPIR_Assert(MPIDI_CH4U_WIN(win, lockQ) != NULL);
+    if (assert & MPI_MODE_NOCHECK) {
+        MPIDI_CH4U_WIN(win, sync).assert_mode |= MPI_MODE_NOCHECK;
+        MPIDI_CH4U_WIN(win, sync).lockall.allLocked = size;
+        goto no_check;
     }
 
-    MPIDI_CH4U_win_lock_info *lockQ;
-    lockQ = (MPIDI_CH4U_win_lock_info *) MPIDI_CH4U_WIN(win, lockQ);
     int i;
-
     for (i = 0; i < size; i++) {
         MPIDI_CH4U_win_cntrl_msg_t msg;
         msg.win_id = MPIDI_CH4U_WIN(win, win_id);
         msg.origin_rank = win->comm_ptr->rank;
         msg.lock_type = MPI_LOCK_SHARED;
 
-        lockQ[i].done = 0;
-        lockQ[i].peer = i;
-        lockQ[i].win = win;
-        lockQ[i].lock_type = MPI_LOCK_SHARED;
-
         mpi_errno = MPIDI_NM_am_send_hdr(i, win->comm_ptr,
-                                         MPIDI_CH4U_WIN_LOCKALL, &msg, sizeof(msg), NULL);
+                                         MPIDI_CH4U_WIN_LOCKALL, &msg, sizeof(msg));
         if (mpi_errno != MPI_SUCCESS)
             MPIR_ERR_SETANDSTMT(mpi_errno, MPI_ERR_RMA_SYNC, goto fn_fail, "**rmasync");
-
-        if (MPIDI_CH4U_WIN(win, sync).lock.remote.allLocked == 1)
-            lockQ[i].done = 1;
     }
 
-    MPIDI_CH4R_PROGRESS_WHILE(size != (int) MPIDI_CH4U_WIN(win, sync).lock.remote.allLocked);
-    MPIDI_CH4U_WIN(win, sync).origin_epoch_type = MPIDI_CH4U_EPOTYPE_LOCK_ALL;
+    MPIDI_CH4R_PROGRESS_WHILE(size != (int) MPIDI_CH4U_WIN(win, sync).lockall.allLocked);
+  no_check:
+    MPIDI_CH4U_WIN(win, sync).access_epoch_type = MPIDI_CH4U_EPOTYPE_LOCK_ALL;
 
   fn_exit:
-    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_CH4I_WIN_LOCK_ALL);
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_LOCK_ALL);
     return mpi_errno;
   fn_fail:
     goto fn_exit;

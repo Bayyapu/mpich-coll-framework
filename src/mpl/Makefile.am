@@ -22,7 +22,7 @@ mpl_headers =               \
     include/mpl.h           \
     include/mpl_base.h      \
     include/mplconfig.h     \
-    include/mpl_utlist.h    \
+    include/utlist.h    \
     include/mpl_valgrind.h  \
     include/mpl_env.h       \
     include/mpl_str.h       \
@@ -36,7 +36,6 @@ mpl_headers =               \
 if MPL_EMBEDDED_MODE
 noinst_HEADERS = $(mpl_headers)
 noinst_LTLIBRARIES = lib@MPLLIBNAME@.la
-AM_CFLAGS = @VISIBILITY_CFLAGS@
 else !MPL_EMBEDDED_MODE
 include_HEADERS = $(mpl_headers)
 lib_LTLIBRARIES = lib@MPLLIBNAME@.la

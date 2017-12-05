@@ -115,6 +115,12 @@ struct MPIR_Request {
      * 32 bytes and 32-bit integers */
     MPIR_cc_t cc;
 
+    /* completion notification counter: this must be decremented by
+     * the request completion routine, when the completion count hits
+     * zero.  this counter allows us to keep track of the completion
+     * of multiple requests in a single place. */
+    MPIR_cc_t *completion_notification;
+
     /* A comm is needed to find the proper error handler */
     MPIR_Comm *comm;
     /* Status is needed for wait/test/recv */
@@ -141,35 +147,11 @@ struct MPIR_Request {
         } persist;  /* kind : MPID_PREQUEST_SEND or MPID_PREQUEST_RECV */
     } u;
 
-    /* Notes about request_completed_cb:
-     *
-     *   1. The callback function is triggered when this requests
-     *      completion count reaches 0.
-     *
-     *   2. The callback function should be nonblocking.
-     *
-     *   3. The callback function should not poke the progress engine,
-     *      or call any function that pokes the progress engine.
-     *
-     *   4. The callback function can complete other requests, thus
-     *      calling those requests' callback functions.  However, the
-     *      recursion depth of request completion function is limited.
-     *      If we ever need deeper recurisve calls, we need to change
-     *      to an iterative design instead of a recursive design for
-     *      request completion.
-     *
-     *   5. In multithreaded programs, since the callback function is
-     *      nonblocking and never calls the progress engine, it would
-     *      never yield the lock to other threads.  So the recursion
-     *      should be multithreading-safe.
-     */
-    int (*request_completed_cb)(struct MPIR_Request *);
-
     /* Other, device-specific information */
 #ifdef MPID_DEV_REQUEST_DECL
     MPID_DEV_REQUEST_DECL
 #endif
-} ATTRIBUTE((__aligned__(32)));
+};
 
 #define MPIR_REQUEST_PREALLOC 8
 
@@ -207,11 +189,12 @@ static inline MPIR_Request *MPIR_Request_create(MPIR_Request_kind_t kind)
         MPIR_cc_set(&req->cc, 1);
 	req->cc_ptr		   = &req->cc;
 
+        req->completion_notification = NULL;
+
 	req->status.MPI_ERROR	   = MPI_SUCCESS;
         MPIR_STATUS_SET_CANCEL_BIT(req->status, FALSE);
 
 	req->comm		   = NULL;
-        req->request_completed_cb  = NULL;
 
         switch(kind) {
         case MPIR_REQUEST_KIND__SEND:
@@ -246,6 +229,11 @@ static inline void MPIR_Request_free(MPIR_Request *req)
     int inuse;
 
     MPIR_Request_release_ref(req, &inuse);
+
+    /* inform the device that we are decrementing the ref-count on
+     * this request */
+    MPID_Request_free_hook(req);
+
     if (inuse == 0) {
         MPL_DBG_MSG_P(MPIR_DBG_REQUEST,VERBOSE,
                        "freeing request, handle=0x%08x", req->handle);
@@ -281,7 +269,7 @@ static inline void MPIR_Request_free(MPIR_Request *req)
             MPL_free(req->u.ureq.greq_fns);
         }
 
-        MPID_Request_free_hook(req);
+        MPID_Request_destroy_hook(req);
 
         MPIR_Handle_obj_free(&MPIR_Request_mem, req);
     }

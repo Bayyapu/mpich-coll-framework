@@ -9,13 +9,13 @@
  *  Contributor License Agreement dated February 8, 2012.
  */
 
-#ifndef SHM_POSIX_PRE_H_INCLUDED
-#define SHM_POSIX_PRE_H_INCLUDED
+#ifndef POSIX_PRE_H_INCLUDED
+#define POSIX_PRE_H_INCLUDED
 
 #include <mpi.h>
 
 struct MPIR_Request;
-struct MPIDU_Segment;
+struct MPIR_Segment;
 
 typedef struct {
     struct MPIR_Request *next;
@@ -29,7 +29,7 @@ typedef struct {
     int type;
     int user_count;
     MPI_Datatype datatype;
-    struct MPIDU_Segment *segment_ptr;
+    struct MPIR_Segment *segment_ptr;
     size_t segment_first;
     size_t segment_size;
 } MPIDI_POSIX_request_t;
@@ -38,4 +38,6 @@ typedef struct {
     int dummy;
 } MPIDI_POSIX_comm_t;
 
-#endif /* SHM_POSIX_PRE_H_INCLUDED */
+#include "posix_coll_params.h"
+#include "posix_coll_containers.h"
+#endif /* POSIX_PRE_H_INCLUDED */

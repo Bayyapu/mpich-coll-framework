@@ -160,18 +160,22 @@ struct MPIR_Comm {
                                     node_roots_comm of rank i in this comm.
                                     It is of size 'local_size'. */
 
-    int           is_low_group;  /* For intercomms only, this boolean is
-				    set for all members of one of the
-				    two groups of processes and clear for
-				    the other.  It enables certain
-				    intercommunicator collective operations
-				    that wish to use half-duplex operations
-				    to implement a full-duplex operation */
+    union {
+        int flags;
+        struct {
+            char is_low_group;/* For intercomms only, this boolean is
+                set for all members of one of the
+                two groups of processes and clear for
+                the other.  It enables certain
+                intercommunicator collective operations
+                that wish to use half-duplex operations
+                to implement a full-duplex operation */
+            char is_single_node;/* if a communicator is inside a single node */
+        };
+    };
+
     struct MPIR_Comm     *comm_next;/* Provides a chain through all active
 				       communicators */
-    struct MPIR_Collops  *coll_fns; /* Pointer to a table of functions
-                                              implementing the collective
-                                              routines */
     struct MPII_Topo_ops  *topo_fns; /* Pointer to a table of functions
 				       implementting the topology routines */
     int next_sched_tag;             /* used by the NBC schedule code to allocate tags */
@@ -200,14 +204,6 @@ struct MPIR_Comm {
 #endif
 };
 extern MPIR_Object_alloc_t MPIR_Comm_mem;
-
-typedef struct MPIR_Gpid {
-#ifdef MPID_DEV_GPID_DECL
-    MPID_DEV_GPID_DECL
-#else
-    int dummy;   /* don't create an empty structure */
-#endif
-}MPIR_Gpid;
 
 /* this function should not be called by normal code! */
 int MPIR_Comm_delete_internal(MPIR_Comm * comm_ptr);
@@ -310,6 +306,12 @@ int MPIR_Comm_remote_group_impl(MPIR_Comm *comm_ptr, MPIR_Group **group_ptr);
 int MPIR_Comm_group_failed_impl(MPIR_Comm *comm, MPIR_Group **failed_group_ptr);
 int MPIR_Comm_remote_group_failed_impl(MPIR_Comm *comm, MPIR_Group **failed_group_ptr);
 int MPIR_Comm_split_impl(MPIR_Comm *comm_ptr, int color, int key, MPIR_Comm **newcomm_ptr);
+int MPIR_Comm_split_type_self(MPIR_Comm *comm_ptr, int split_type, int key, MPIR_Comm **newcomm_ptr);
+int MPIR_Comm_split_type_node(MPIR_Comm *comm_ptr, int split_type, int key, MPIR_Comm **newcomm_ptr);
+int MPIR_Comm_split_type_node_topo(MPIR_Comm *comm_ptr, int split_type, int key, MPIR_Info * info_ptr,
+                                   MPIR_Comm **newcomm_ptr);
+int MPIR_Comm_split_type(MPIR_Comm *comm_ptr, int split_type, int key, MPIR_Info *info_ptr,
+                         MPIR_Comm **newcomm_ptr);
 int MPIR_Comm_split_type_impl(MPIR_Comm *comm_ptr, int split_type, int key, MPIR_Info *info_ptr,
                               MPIR_Comm **newcomm_ptr);
 int MPIR_Comm_set_attr_impl(MPIR_Comm *comm_ptr, int comm_keyval, void *attribute_val,

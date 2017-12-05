@@ -24,9 +24,13 @@ AC_MSG_NOTICE([RUNNING PREREQ FOR CH4 DEVICE])
 if test -z "${device_args}" ; then
     ch4_netmods="ofi"
 else
-    ch4_netmods=`echo ${device_args} | sed -e 's/,/ /g'`
+    changequote(<<,>>)
+    netmod_args=`echo ${device_args} | sed -e 's/^[^:]*//' -e 's/^://' -e 's/,/ /g'`
+    changequote([,])
+    ch4_netmods=`echo ${device_args} | sed -e 's/:.*$//' -e 's/,/ /g'`
 fi
 export ch4_netmods
+export netmod_args
 
 #
 # reset DEVICE so that it (a) always includes the channel name, and (b) does not include channel options
@@ -82,11 +86,25 @@ for net in $ch4_netmods ; do
         ch4_nets_strings="$ch4_nets_strings, \"$net\""
     fi
 
+    if test -z "$ch4_netmod_coll_globals_default" ; then
+        ch4_netmod_coll_globals_default="#include \"../netmod/${net}/${net}_coll_globals_default.c\""
+    else
+        ch4_netmod_coll_globals_default="${ch4_netmod_coll_globals_default}
+#include \"../netmod/${net}/${net}_coll_globals_default.c\""
+    fi
+
     if test -z "$ch4_netmod_pre_include" ; then
         ch4_netmod_pre_include="#include \"../netmod/${net}/${net}_pre.h\""
     else
         ch4_netmod_pre_include="${ch4_netmod_pre_include}
 #include \"../netmod/${net}/${net}_pre.h\""
+    fi
+
+    if test -z "$ch4_netmod_coll_params_include" ; then
+        ch4_netmod_coll_params_include="#include \"../netmod/${net}/${net}_coll_params.h\""
+    else
+        ch4_netmod_coll_params_include="${ch4_netmod_coll_params_include}
+#include \"../netmod/${net}/${net}_coll_params.h\""
     fi
 
     net_upper=`echo ${net} | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`
@@ -122,18 +140,35 @@ MPIDI_${net_upper}_dt_t ${net};"
         ch4_netmod_op_decl="${ch4_netmod_op_decl} \\
 MPIDI_${net_upper}_op_t ${net};"
     fi
-
+    if test -z "$ch4_netmod_barrier_params_decl" ; then
+        ch4_netmod_barrier_params_decl="MPIDI_${net_upper}_BARRIER_PARAMS_DECL;"
+    else
+        ch4_netmod_barrier_params_decl="${ch4_netmod_barrier_params_decl} \\
+MPIDI_${net_upper}_barrier_params_t ${net};"
+    fi
+    if test -z "$ch4_netmod_bcast_params_decl" ; then
+        ch4_netmod_bcast_params_decl="MPIDI_${net_upper}_BCAST_PARAMS_DECL;"
+    else
+        ch4_netmod_bcast_params_decl="${ch4_netmod_bcast_params_decl} \\
+MPIDI_${net_upper}_bcast_params_t ${net};"
+    fi
+    if test -z "$ch4_netmod_reduce_params_decl" ; then
+        ch4_netmod_reduce_params_decl="MPIDI_${net_upper}_REDUCE_PARAMS_DECL;"
+    else
+        ch4_netmod_reduce_params_decl="${ch4_netmod_reduce_params_decl} \\
+MPIDI_${net_upper}_reduce_params_t ${net};"
+    fi
+    if test -z "$ch4_netmod_allreduce_params_decl" ; then
+        ch4_netmod_allreduce_params_decl="MPIDI_${net_upper}_ALLREDUCE_PARAMS_DECL;"
+    else
+        ch4_netmod_allreduce_params_decl="${ch4_netmod_allreduce_params_decl} \\
+MPIDI_${net_upper}_allreduce_params_t ${net};"
+    fi
     if test -z "$ch4_netmod_win_decl" ; then
         ch4_netmod_win_decl="MPIDI_${net_upper}_win_t ${net};"
     else
         ch4_netmod_win_decl="${ch4_netmod_win_decl} \\
 MPIDI_${net_upper}_win_t ${net};"
-    fi
-    if test -z "$ch4_netmod_gpid_decl" ; then
-        ch4_netmod_gpid_decl="MPIDI_${net_upper}_gpid_t ${net};"
-    else
-        ch4_netmod_gpid_decl="${ch4_netmod_gpid_decl} \\
-MPIDI_${net_upper}_gpid_t ${net};"
     fi
     if test -z "$ch4_netmod_addr_decl" ; then
         ch4_netmod_addr_decl="MPIDI_${net_upper}_addr_t ${net};"
@@ -159,23 +194,33 @@ AC_SUBST(ch4_nets_func_array)
 AC_SUBST(ch4_nets_native_func_array)
 AC_SUBST(ch4_nets_strings)
 AC_SUBST(ch4_netmod_pre_include)
+AC_SUBST(ch4_netmod_coll_globals_default)
+AC_SUBST(ch4_netmod_coll_params_include)
 AC_SUBST(ch4_netmod_amrequest_decl)
 AC_SUBST(ch4_netmod_request_decl)
 AC_SUBST(ch4_netmod_comm_decl)
 AC_SUBST(ch4_netmod_dt_decl)
 AC_SUBST(ch4_netmod_win_decl)
-AC_SUBST(ch4_netmod_gpid_decl)
 AC_SUBST(ch4_netmod_addr_decl)
 AC_SUBST(ch4_netmod_op_decl)
+AC_SUBST(ch4_netmod_barrier_params_decl)
+AC_SUBST(ch4_netmod_bcast_params_decl)
+AC_SUBST(ch4_netmod_reduce_params_decl)
+AC_SUBST(ch4_netmod_allreduce_params_decl)
 AM_SUBST_NOTMAKE(ch4_netmod_pre_include)
+AM_SUBST_NOTMAKE(ch4_netmod_coll_globals_default)
+AM_SUBST_NOTMAKE(ch4_netmod_coll_params_include)
 AM_SUBST_NOTMAKE(ch4_netmod_amrequest_decl)
 AM_SUBST_NOTMAKE(ch4_netmod_request_decl)
 AM_SUBST_NOTMAKE(ch4_netmod_comm_decl)
 AM_SUBST_NOTMAKE(ch4_netmod_dt_decl)
 AM_SUBST_NOTMAKE(ch4_netmod_win_decl)
-AM_SUBST_NOTMAKE(ch4_netmod_gpid_decl)
 AM_SUBST_NOTMAKE(ch4_netmod_addr_decl)
 AM_SUBST_NOTMAKE(ch4_netmod_op_decl)
+AM_SUBST_NOTMAKE(ch4_netmod_barrier_params_decl)
+AM_SUBST_NOTMAKE(ch4_netmod_bcast_params_decl)
+AM_SUBST_NOTMAKE(ch4_netmod_reduce_params_decl)
+AM_SUBST_NOTMAKE(ch4_netmod_allreduce_params_decl)
 
 AC_ARG_ENABLE(ch4-netmod-direct,
     [--enable-ch4-netmod-direct
@@ -193,14 +238,15 @@ fi
 
 AC_ARG_ENABLE(ch4-shm,
     [--enable-ch4-shm=level:module
-       Control whether CH4 shared memory is built and/or used.
+       Control whether CH4 shared memory is built and/or used. Default
+       shm level depends on selected netmod(s). (OFI=exclusive, UCX=no).
        level:
          no        - Do not build or use CH4 shared memory.
          yes       - Build CH4 shared memory, but do not use it by default (Your chosen netmod must provide it).
-         exclusive - Build and exclusively use CH4 shared memory. (Default)
+         exclusive - Build and exclusively use CH4 shared memory.
        module-list(optional).  comma separated list of shared memory modules:
          posix     - POSIX shared memory implementation
-    ],,enable_ch4_shm=exclusive:posix)
+    ],,enable_ch4_shm=default)
 
 AC_ARG_ENABLE(ch4-shm-direct,
     [--enable-ch4-shm-direct
@@ -209,6 +255,15 @@ AC_ARG_ENABLE(ch4-shm-direct,
          yes       - Enabled (default)
          no        - Disabled (may improve build times and code size)
     ],,enable_ch4_shm_direct=yes)
+
+# setup shared memory defaults
+if test "${enable_ch4_shm}" = "default" ; then
+    if test "${ch4_netmods}" = "ucx" ; then
+        enable_ch4_shm=no
+    else
+	enable_ch4_shm=exclusive:posix
+    fi
+fi
 
 ch4_shm_level=`echo $enable_ch4_shm | sed -e 's/:.*$//'`
 changequote(<<,>>)
@@ -292,11 +347,24 @@ for shm in $ch4_shm ; do
         ch4_shm_strings="$ch4_shm_strings, \"$shm\""
     fi
 
+    if test -z "$ch4_shm_coll_globals_default" ; then
+        ch4_shm_coll_globals_default="#include \"../shm/${shm}/${shm}_coll_globals_default.c\""
+    else
+        ch4_shm_coll_globals_default="${ch4_shm_coll_globals_default}
+#include \"../shm/${shm}/${shm}_coll_globals_default.c\""
+    fi
+
     if test -z "$ch4_shm_pre_include" ; then
         ch4_shm_pre_include="#include \"../shm/${shm}/${shm}_pre.h\""
     else
         ch4_shm_pre_include="${ch4_shm_pre_include}
 #include \"../shm/${shm}/${shm}_pre.h\""
+    fi
+    if test -z "$ch4_shm_coll_params_include" ; then
+        ch4_shm_coll_params_include="#include \"../shm/${shm}/${shm}_coll_params.h\""
+    else
+        ch4_shm_coll_params_include="${ch4_shm_coll_params_include}
+#include \"../shm/${shm}/${shm}_coll_params.h\""
     fi
 
     shm_upper=`echo ${shm} | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`
@@ -313,7 +381,30 @@ MPIDI_${shm_upper}_request_t ${shm};"
         ch4_shm_comm_decl="${ch4_shm_comm_decl} \\
 MPIDI_${shm_upper}_comm_t ${shm};"
     fi
-
+    if test -z "$ch4_shm_barrier_params_decl" ; then
+        ch4_shm_barrier_params_decl="MPIDI_${shm_upper}_BARRIER_PARAMS_DECL;"
+    else
+        ch4_shm_barrier_params_decl="${ch4_shm_barrier_params_decl} \\
+MPIDI_${shm_upper}_barrier_params_t ${shm};"
+    fi
+    if test -z "$ch4_shm_bcast_params_decl" ; then
+        ch4_shm_bcast_params_decl="MPIDI_${shm_upper}_BCAST_PARAMS_DECL;"
+    else
+        ch4_shm_bcast_params_decl="${ch4_shm_bcast_params_decl} \\
+MPIDI_${shm_upper}_bcast_params_t ${shm};"
+    fi
+    if test -z "$ch4_shm_reduce_params_decl" ; then
+        ch4_shm_reduce_params_decl="MPIDI_${shm_upper}_REDUCE_PARAMS_DECL;"
+    else
+        ch4_shm_reduce_params_decl="${ch4_shm_reduce_params_decl} \\
+MPIDI_${shm_upper}_reduce_params_t ${shm};"
+    fi
+    if test -z "$ch4_shm_allreduce_params_decl" ; then
+        ch4_shm_allreduce_params_decl="MPIDI_${shm_upper}_ALLREDUCE_PARAMS_DECL;"
+    else
+        ch4_shm_allreduce_params_decl="${ch4_shm_allreduce_params_decl} \\
+MPIDI_${shm_upper}_allreduce_params_t ${shm};"
+    fi
 
     shm_index=`expr $shm_index + 1`
 done
@@ -328,11 +419,23 @@ AC_SUBST(ch4_shm_func_array)
 AC_SUBST(ch4_shm_native_func_array)
 AC_SUBST(ch4_shm_strings)
 AC_SUBST(ch4_shm_pre_include)
+AC_SUBST(ch4_shm_coll_globals_default)
+AC_SUBST(ch4_shm_coll_params_include)
 AC_SUBST(ch4_shm_request_decl)
 AC_SUBST(ch4_shm_comm_decl)
+AC_SUBST(ch4_shm_barrier_params_decl)
+AC_SUBST(ch4_shm_bcast_params_decl)
+AC_SUBST(ch4_shm_reduce_params_decl)
+AC_SUBST(ch4_shm_allreduce_params_decl)
 AM_SUBST_NOTMAKE(ch4_shm_pre_include)
+AM_SUBST_NOTMAKE(ch4_shm_coll_globals_default)
+AM_SUBST_NOTMAKE(ch4_shm_coll_params_include)
 AM_SUBST_NOTMAKE(ch4_shm_request_decl)
 AM_SUBST_NOTMAKE(ch4_shm_comm_decl)
+AM_SUBST_NOTMAKE(ch4_shm_barrier_params_decl)
+AM_SUBST_NOTMAKE(ch4_shm_bcast_params_decl)
+AM_SUBST_NOTMAKE(ch4_shm_reduce_params_decl)
+AM_SUBST_NOTMAKE(ch4_shm_allreduce_params_decl)
 
 if test "$ch4_shm_array_sz" = "1"  && test "$enable_ch4_shm_direct" = "yes" ;  then
    PAC_APPEND_FLAG([-DSHM_DIRECT=__shm_direct_${ch4_shm}__], [CPPFLAGS])
@@ -365,20 +468,8 @@ if test "$enable_ch4r_per_comm_msg_queue" = "yes" ; then
         [Define if CH4U will use per-communicator message queues])
 fi
 
-PAC_ARG_SHARED_MEMORY
-
-AC_CONFIG_FILES([
-src/mpid/ch4/src/mpid_ch4_net_array.c
-src/mpid/ch4/src/mpid_ch4_shm_array.c
-src/mpid/ch4/include/netmodpre.h
-src/mpid/ch4/include/shmpre.h
-])
-PAC_ARG_SHARED_MEMORY
-])dnl end AM_COND_IF(BUILD_CH4,...)
-
-AM_CONDITIONAL([BUILD_CH4_SHM],[test "$ch4_shm_level" = "yes" -o "$ch4_shm_level" = "exclusive"])
-
 AC_CHECK_HEADERS(sys/mman.h sys/stat.h fcntl.h)
+AC_CHECK_FUNC(mmap, [], [AC_MSG_ERROR(mmap is required to build CH4)])
 
 gl_FUNC_RANDOM_R
 if test "$HAVE_RANDOM_R" = "1" -a "$HAVE_STRUCT_RANDOM_DATA" = "1" ; then
@@ -388,6 +479,23 @@ else
     AC_MSG_NOTICE([Using a non-symmetric heap])
 fi
 
+AC_CHECK_FUNCS(gethostname)
+if test "$ac_cv_func_gethostname" = "yes" ; then
+    # Do we need to declare gethostname?
+    PAC_FUNC_NEEDS_DECL([#include <unistd.h>],gethostname)
+fi
+
+AC_CONFIG_FILES([
+src/mpid/ch4/src/mpid_ch4_net_array.c
+src/mpid/ch4/include/netmodpre.h
+src/mpid/ch4/include/shmpre.h
+src/mpid/ch4/include/coll_algo_params.h
+src/mpid/ch4/src/ch4_coll_globals_default.c
+])
+])dnl end AM_COND_IF(BUILD_CH4,...)
+
+AM_CONDITIONAL([BUILD_CH4_SHM],[test "$ch4_shm_level" = "yes" -o "$ch4_shm_level" = "exclusive"])
+AM_CONDITIONAL([BUILD_CH4_COLL_TUNING],[test -e "$srcdir/src/mpid/ch4/src/ch4_coll_globals.c"])
 
 ])dnl end _BODY
 

@@ -8,19 +8,29 @@
  *  to Argonne National Laboratory subject to Software Grant and Corporate
  *  Contributor License Agreement dated February 8, 2012.
  */
-#ifndef SHM_POSIX_REQUEST_H_INCLUDED
-#define SHM_POSIX_REQUEST_H_INCLUDED
+#ifndef POSIX_REQUEST_H_INCLUDED
+#define POSIX_REQUEST_H_INCLUDED
 
 #include "posix_impl.h"
 
-static inline void MPIDI_SHM_am_request_init(MPIR_Request * req)
+static inline void MPIDI_POSIX_am_request_init(MPIR_Request * req)
 {
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_AM_REQUEST_INIT);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_AM_REQUEST_INIT);
+
     MPIR_Assert(0);
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_AM_REQUEST_INIT);
 }
 
-static inline void MPIDI_SHM_am_request_finalize(MPIR_Request * req)
+static inline void MPIDI_POSIX_am_request_finalize(MPIR_Request * req)
 {
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_POSIX_AM_REQUEST_FINALIZE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_POSIX_AM_REQUEST_FINALIZE);
+
     MPIR_Assert(0);
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_POSIX_AM_REQUEST_FINALIZE);
 }
 
-#endif /* SHM_POSIX_REQUEST_H_INCLUDED */
+#endif /* POSIX_REQUEST_H_INCLUDED */

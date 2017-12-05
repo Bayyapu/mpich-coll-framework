@@ -7,76 +7,65 @@
 
 #include "ad_nfs.h"
 #include "adio_extern.h"
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 void ADIOI_NFS_WriteContig(ADIO_File fd, const void *buf, int count,
                      MPI_Datatype datatype, int file_ptr_type,
 		     ADIO_Offset offset, ADIO_Status *status, int *error_code)
 {
-    int err=-1;
+    ssize_t err=-1;
     MPI_Count datatype_size, len;
+    ADIO_Offset bytes_xfered=0;
+    size_t wr_count;
     static char myname[] = "ADIOI_NFS_WRITECONTIG";
+    char *p;
 
     MPI_Type_size_x(datatype, &datatype_size);
-    len = datatype_size * count;
+    len = datatype_size * (ADIO_Offset)count;
 
-    if (file_ptr_type == ADIO_EXPLICIT_OFFSET) {
-	if (fd->fp_sys_posn != offset) {
-#ifdef ADIOI_MPE_LOGGING
-            MPE_Log_event( ADIOI_MPE_lseek_a, 0, NULL );
-#endif
-	    lseek(fd->fd_sys, offset, SEEK_SET);
-#ifdef ADIOI_MPE_LOGGING
-            MPE_Log_event( ADIOI_MPE_lseek_b, 0, NULL );
-#endif
-        }
-	ADIOI_WRITE_LOCK(fd, offset, SEEK_SET, len);
-#ifdef ADIOI_MPE_LOGGING
-        MPE_Log_event( ADIOI_MPE_write_a, 0, NULL );
-#endif
-	err = write(fd->fd_sys, buf, len);
-#ifdef ADIOI_MPE_LOGGING
-        MPE_Log_event( ADIOI_MPE_write_b, 0, NULL );
-#endif
-	ADIOI_UNLOCK(fd, offset, SEEK_SET, len);
-	fd->fp_sys_posn = offset + err;
-	/* individual file pointer not updated */        
-    }
-    else { /* write from curr. location of ind. file pointer */
+    if (file_ptr_type == ADIO_INDIVIDUAL) {
 	offset = fd->fp_ind;
-	if (fd->fp_sys_posn != fd->fp_ind) {
-#ifdef ADIOI_MPE_LOGGING
-            MPE_Log_event( ADIOI_MPE_lseek_a, 0, NULL );
-#endif
-	    lseek(fd->fd_sys, fd->fp_ind, SEEK_SET);
-#ifdef ADIOI_MPE_LOGGING
-            MPE_Log_event( ADIOI_MPE_lseek_b, 0, NULL );
-#endif
-        }
-	ADIOI_WRITE_LOCK(fd, offset, SEEK_SET, len);
-#ifdef ADIOI_MPE_LOGGING
-        MPE_Log_event( ADIOI_MPE_write_a, 0, NULL );
-#endif
-	err = write(fd->fd_sys, buf, len);
-#ifdef ADIOI_MPE_LOGGING
-        MPE_Log_event( ADIOI_MPE_write_b, 0, NULL );
-#endif
-	ADIOI_UNLOCK(fd, offset, SEEK_SET, len);
-	fd->fp_ind += err;
-	fd->fp_sys_posn = fd->fp_ind;
     }
 
-    /* --BEGIN ERROR HANDLING-- */
-    if (err == -1) {
-	*error_code = MPIO_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE,
-					   myname, __LINE__, MPI_ERR_IO,
-					   "**io",
-					   "**io %s", strerror(errno));
-	return;
+    p = (char *)buf;
+    while (bytes_xfered < len) {
+#ifdef ADIOI_MPE_LOGGING
+	MPE_Log_event( ADIOI_MPE_write_a, 0, NULL );
+#endif
+	wr_count = len - bytes_xfered;
+	/* work around FreeBSD and OS X defects*/
+	if (wr_count > INT_MAX)
+	    wr_count = INT_MAX;
+
+	ADIOI_WRITE_LOCK(fd, offset+bytes_xfered, SEEK_SET, wr_count);
+	err = pwrite(fd->fd_sys, p, wr_count, offset+bytes_xfered);
+	/* --BEGIN ERROR HANDLING-- */
+	if (err == -1) {
+	    *error_code = MPIO_Err_create_code(MPI_SUCCESS,
+		    MPIR_ERR_RECOVERABLE,
+		    myname, __LINE__, MPI_ERR_IO, "**io",
+		    "**io %s", strerror(errno));
+	    fd->fp_sys_posn = -1;
+	    return;
+	}
+	/* --END ERROR HANDLING-- */
+#ifdef ADIOI_MPE_LOGGING
+	MPE_Log_event( ADIOI_MPE_write_b, 0, NULL );
+#endif
+	ADIOI_UNLOCK(fd, offset+bytes_xfered, SEEK_SET, wr_count);
+	bytes_xfered += err;
+	p += err;
     }
-    /* --END ERROR HANDLING-- */
+    fd->fp_sys_posn = offset + bytes_xfered;
+
+    if (file_ptr_type == ADIO_INDIVIDUAL) {
+	fd->fp_ind += bytes_xfered;
+    }
 
 #ifdef HAVE_STATUS_SET_BYTES
-    MPIR_Status_set_bytes(status, datatype, err);
+    MPIR_Status_set_bytes(status, datatype, bytes_xfered);
 #endif
 
     *error_code = MPI_SUCCESS;
@@ -272,9 +261,11 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 /* offset is in units of etype relative to the filetype. */
 
     ADIOI_Flatlist_node *flat_buf, *flat_file;
-    int i, j, k, err=-1, bwr_size, fwr_size=0, st_index=0;
-    int bufsize, num, size, sum, n_etypes_in_filetype, size_in_filetype;
-    int n_filetypes, etype_in_filetype;
+    int i, j, k, err=-1, bwr_size, st_index=0;
+    ADIO_Offset i_offset, sum, size_in_filetype;
+    ADIO_Offset num, size, n_etypes_in_filetype;
+    MPI_Count bufsize;
+    ADIO_Offset n_filetypes, etype_in_filetype;
     ADIO_Offset abs_off_in_filetype=0;
     int req_len;
     MPI_Count filetype_size, etype_size, buftype_size;
@@ -283,8 +274,9 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
     ADIO_Offset userbuf_off;
     ADIO_Offset off, req_off, disp, end_offset=0, writebuf_off, start_off;
     char *writebuf=NULL, *value;
-    int st_fwr_size, st_n_filetypes, writebuf_len, write_sz;
-    int new_bwr_size, new_fwr_size, err_flag=0, info_flag, max_bufsize;
+    int st_n_filetypes, writebuf_len, write_sz;
+    ADIO_Offset fwr_size = 0, new_fwr_size, st_fwr_size;
+    int new_bwr_size, err_flag=0, info_flag, max_bufsize;
     static char myname[] = "ADIOI_NFS_WRITESTRIDED";
 
     ADIOI_Datatype_iscontig(datatype, &buftype_is_contig);
@@ -408,8 +400,8 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
         }
 	else {
 	    n_etypes_in_filetype = filetype_size/etype_size;
-	    n_filetypes = (int) (offset / n_etypes_in_filetype);
-	    etype_in_filetype = (int) (offset % n_etypes_in_filetype);
+	    n_filetypes = offset / n_etypes_in_filetype;
+	    etype_in_filetype = offset % n_etypes_in_filetype;
 	    size_in_filetype = etype_in_filetype * etype_size;
  
 	    sum = 0;
@@ -434,7 +426,13 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
        /* this could happen, for example, with subarray types that are
         * actually fairly contiguous */
         if (buftype_is_contig && bufsize <= fwr_size) {
-            ADIO_WriteContig(fd, buf, bufsize, MPI_BYTE, ADIO_EXPLICIT_OFFSET,
+	    /* though MPI api has an integer 'count' parameter, derived
+	     * datatypes might describe more bytes than can fit into an integer.
+	     * if we've made it this far, we can pass a count of original
+	     * datatypes, instead of a count of bytes (which might overflow)
+	     * Other WriteContig calls in this path are operating on data
+	     * sieving buffer */
+            ADIO_WriteContig(fd, buf, count, datatype, ADIO_EXPLICIT_OFFSET,
                              offset, status, error_code);
 
            if (file_ptr_type == ADIO_INDIVIDUAL) {
@@ -457,7 +455,7 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 #ifdef HAVE_STATUS_SET_BYTES
            MPIR_Status_set_bytes(status, datatype, bufsize);
 #endif 
-            return;
+            goto fn_exit;
         }
 
        /* Calculate end_offset, the last byte-offset that will be accessed.
@@ -465,13 +463,14 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 
 	st_fwr_size = fwr_size;
 	st_n_filetypes = n_filetypes;
-	i = 0;
+	i_offset = 0;
 	j = st_index;
 	off = offset;
 	fwr_size = MPL_MIN(st_fwr_size, bufsize);
-	while (i < bufsize) {
-	    i += fwr_size;
+	while (i_offset < bufsize) {
+	    i_offset += fwr_size;
 	    end_offset = off + fwr_size - 1;
+
             j = (j+1) % flat_file->count;
             n_filetypes += (j == 0) ? 1 : 0;
             while (flat_file->blocklens[j]==0) {
@@ -480,8 +479,8 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 	    }
 
 	    off = disp + flat_file->indices[j] + 
-		    (ADIO_Offset) n_filetypes*filetype_extent;
-	    fwr_size = MPL_MIN(flat_file->blocklens[j], bufsize-i);
+		    n_filetypes*(ADIO_Offset)filetype_extent;
+	    fwr_size = MPL_MIN(flat_file->blocklens[j], bufsize-i_offset);
 	}
 
 /* if atomicity is true, lock the region to be accessed */
@@ -491,6 +490,7 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
         /* initial read for the read-modify-write */
         writebuf_off = offset;
         writebuf = (char *) ADIOI_Malloc(max_bufsize);
+	memset(writebuf, -1, max_bufsize);
         writebuf_len = (int)(MPL_MIN(max_bufsize,end_offset-writebuf_off+1));
 	if (!(fd->atomicity)) ADIOI_WRITE_LOCK(fd, writebuf_off, SEEK_SET, writebuf_len);
 #ifdef ADIOI_MPE_LOGGING
@@ -521,12 +521,12 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 /* contiguous in memory, noncontiguous in file. should be the most
    common case. */
 
-	    i = 0;
+	    i_offset = 0;
 	    j = st_index;
 	    off = offset;
 	    n_filetypes = st_n_filetypes;
 	    fwr_size = MPL_MIN(st_fwr_size, bufsize);
-	    while (i < bufsize) {
+	    while (i_offset < bufsize) {
                 if (fwr_size) { 
                     /* TYPE_UB and TYPE_LB can result in 
                        fwr_size = 0. save system call in such cases */ 
@@ -535,13 +535,13 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 
 		    req_off = off;
 		    req_len = fwr_size;
-		    userbuf_off = i;
+		    userbuf_off = i_offset;
 		    ADIOI_BUFFERED_WRITE
 		}
-		i += fwr_size;
+		i_offset += fwr_size;
 
                 if (off + fwr_size < disp + flat_file->indices[j] +
-                   flat_file->blocklens[j] + (ADIO_Offset) n_filetypes*filetype_extent)
+                   flat_file->blocklens[j] + n_filetypes*(ADIO_Offset)filetype_extent)
                        off += fwr_size;
                 /* did not reach end of contiguous block in filetype.
                    no more I/O needed. off is incremented by fwr_size. */
@@ -553,8 +553,9 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
                         n_filetypes += (j == 0) ? 1 : 0;
                     }
 		    off = disp + flat_file->indices[j] + 
-                                      (ADIO_Offset) n_filetypes*filetype_extent;
-		    fwr_size = MPL_MIN(flat_file->blocklens[j], bufsize-i);
+                                      n_filetypes*(ADIO_Offset)filetype_extent;
+		    fwr_size = MPL_MIN(flat_file->blocklens[j],
+			    bufsize-i_offset);
 		}
 	    }
 	}
@@ -564,7 +565,7 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 	    flat_buf = ADIOI_Flatten_and_find(datatype);
 
 	    k = num = buf_count = 0;
-	    i = (int) (flat_buf->indices[0]);
+	    i_offset = flat_buf->indices[0];
 	    j = st_index;
 	    off = offset;
 	    n_filetypes = st_n_filetypes;
@@ -579,7 +580,7 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 
 		    req_off = off;
 		    req_len = size;
-		    userbuf_off = i;
+		    userbuf_off = i_offset;
 		    ADIOI_BUFFERED_WRITE
 		}
 
@@ -596,11 +597,11 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 		    }
 
 		    off = disp + flat_file->indices[j] + 
-                                  (ADIO_Offset) n_filetypes*filetype_extent;
+                                  n_filetypes*(ADIO_Offset)filetype_extent;
 
 		    new_fwr_size = flat_file->blocklens[j];
 		    if (size != bwr_size) {
-			i += size;
+			i_offset += size;
 			new_bwr_size -= size;
 		    }
 		}
@@ -610,8 +611,8 @@ void ADIOI_NFS_WriteStrided(ADIO_File fd, const void *buf, int count,
 
 		    k = (k + 1)%flat_buf->count;
 		    buf_count++;
-		    i = (int) (buftype_extent*(buf_count/flat_buf->count) +
-			flat_buf->indices[k]); 
+		    i_offset  = (ADIO_Offset)buftype_extent*(ADIO_Offset)(buf_count/flat_buf->count) +
+			flat_buf->indices[k];
 		    new_bwr_size = flat_buf->blocklens[k];
 		    if (size != fwr_size) {
 			off += size;

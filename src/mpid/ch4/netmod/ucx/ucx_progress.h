@@ -6,8 +6,8 @@
  *  Portions of this code were written by Mellanox Technologies Ltd.
  *  Copyright (C) Mellanox Technologies Ltd. 2016. ALL RIGHTS RESERVED
  */
-#ifndef NETMOD_UCX_PROGRESS_H_INCLUDED
-#define NETMOD_UCX_PROGRESS_H_INCLUDED
+#ifndef UCX_PROGRESS_H_INCLUDED
+#define UCX_PROGRESS_H_INCLUDED
 
 #include "ucx_impl.h"
 //#include "events.h"
@@ -15,11 +15,11 @@
 static inline int MPIDI_UCX_am_handler(void *msg, size_t msg_sz)
 {
     int mpi_errno;
-    MPIR_Request *rreq;
+    MPIR_Request *rreq = NULL;
     void *p_data;
     void *in_data;
     size_t data_sz, in_data_sz;
-    MPIDI_NM_am_completion_handler_fn cmpl_handler_fn;
+    MPIDIG_am_target_cmpl_cb target_cmpl_cb = NULL;
     struct iovec *iov;
     int i, is_contig, iov_len;
     size_t done, curr_len, rem;
@@ -28,16 +28,16 @@ static inline int MPIDI_UCX_am_handler(void *msg, size_t msg_sz)
     p_data = in_data = (char *) msg_hdr->payload + (msg_sz - msg_hdr->data_sz - sizeof(*msg_hdr));
     in_data_sz = data_sz = msg_hdr->data_sz;
 
-    MPIDI_UCX_global.am_handlers[msg_hdr->handler_id] (msg_hdr->handler_id, msg_hdr->payload,
-                                                       &p_data, &data_sz,
-                                                       &is_contig, &cmpl_handler_fn, &rreq);
+    MPIDIG_global.target_msg_cbs[msg_hdr->handler_id] (msg_hdr->handler_id, msg_hdr->payload,
+                                                       &p_data, &data_sz, &is_contig,
+                                                       &target_cmpl_cb, &rreq);
 
     if (!rreq)
         goto fn_exit;
 
-    if ((!p_data || !data_sz) && cmpl_handler_fn) {
+    if ((!p_data || !data_sz) && target_cmpl_cb) {
         MPIR_STATUS_SET_COUNT(rreq->status, data_sz);
-        cmpl_handler_fn(rreq);
+        target_cmpl_cb(rreq);
         goto fn_exit;
     }
 
@@ -76,8 +76,8 @@ static inline int MPIDI_UCX_am_handler(void *msg, size_t msg_sz)
         MPIR_STATUS_SET_COUNT(rreq->status, done);
     }
 
-    if (cmpl_handler_fn) {
-        cmpl_handler_fn(rreq);
+    if (target_cmpl_cb) {
+        target_cmpl_cb(rreq);
     }
 
   fn_exit:
@@ -103,7 +103,7 @@ static inline void MPIDI_UCX_Handle_am_recv(void *request, ucs_status_t status,
 #define FUNCNAME MPIDI_NM_progress
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
-static inline int MPIDI_NM_progress(void *netmod_context, int blocking)
+static inline int MPIDI_NM_progress(int vni, int blocking)
 {
     int mpi_errno = MPI_SUCCESS;
     ucp_tag_recv_info_t info;
@@ -114,7 +114,7 @@ static inline int MPIDI_NM_progress(void *netmod_context, int blocking)
     message_handle =
         ucp_tag_probe_nb(MPIDI_UCX_global.worker, MPIDI_UCX_AM_TAG, MPIDI_UCX_AM_TAG, 1, &info);
     while (message_handle) {
-        am_buf = MPL_malloc(info.length);
+        am_buf = MPL_malloc(info.length, MPL_MEM_BUFFER);
         ucp_request = (MPIDI_UCX_ucp_request_t *) ucp_tag_msg_recv_nb(MPIDI_UCX_global.worker,
                                                                       am_buf,
                                                                       info.length,
@@ -130,13 +130,11 @@ static inline int MPIDI_NM_progress(void *netmod_context, int blocking)
         MPL_free(am_buf);
         message_handle =
             ucp_tag_probe_nb(MPIDI_UCX_global.worker, MPIDI_UCX_AM_TAG,
-                             ~MPIDI_UCX_AM_TAG, 1, &info);
+                             MPIDI_UCX_AM_TAG, 1, &info);
 
     }
 
     ucp_worker_progress(MPIDI_UCX_global.worker);
-
-    MPID_THREAD_CS_EXIT(POBJ, MPIDI_THREAD_WORKER_MUTEX);
 
   fn_exit:
     return mpi_errno;
@@ -144,4 +142,4 @@ static inline int MPIDI_NM_progress(void *netmod_context, int blocking)
     goto fn_exit;
 }
 
-#endif /* NETMOD_UCX_PROGRESS_H_INCLUDED */
+#endif /* UCX_PROGRESS_H_INCLUDED */
