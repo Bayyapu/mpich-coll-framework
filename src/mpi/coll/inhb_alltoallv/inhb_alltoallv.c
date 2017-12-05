@@ -29,6 +29,30 @@ int MPI_Ineighbor_alltoallv(const void *sendbuf, const int sendcounts[], const i
 #define MPI_Ineighbor_alltoallv PMPI_Ineighbor_alltoallv
 
 #undef FUNCNAME
+#define FUNCNAME MPIR_Ineighbor_alltoallv_intra_sched
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Ineighbor_alltoallv_intra_sched(const void *sendbuf, const int sendcounts[],
+                                   const int sdispls[], MPI_Datatype sendtype,
+                                   void *recvbuf, const int recvcounts[],
+                                   const int rdispls[], MPI_Datatype recvtype,
+                                   MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Ineighbor_alltoallv_generic_sched(sendbuf, sendcounts, sdispls, sendtype,
+                                               recvbuf, recvcounts, rdispls, recvtype,
+                                               comm_ptr, s);
+
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPIR_Ineighbor_alltoallv_sched
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -40,9 +64,17 @@ int MPIR_Ineighbor_alltoallv_sched(const void *sendbuf, const int sendcounts[],
 {
     int mpi_errno = MPI_SUCCESS;
 
-    mpi_errno = MPIR_Ineighbor_alltoallv_generic_sched(sendbuf, sendcounts, sdispls, sendtype,
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        mpi_errno = MPIR_Ineighbor_alltoallv_intra_sched(sendbuf, sendcounts, sdispls, sendtype,
                                                recvbuf, recvcounts, rdispls, recvtype,
                                                comm_ptr, s);
+    } else {
+        /* intercommunicator */
+        mpi_errno = MPI_ERR_OTHER;
+        goto fn_fail;
+    }
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:
     return mpi_errno;

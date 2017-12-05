@@ -45,6 +45,44 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
 
    End Algorithm: MPI_Scatterv
 */
+#undef FUNCNAME
+#define FUNCNAME MPIR_Iscatterv_intra_sched
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Iscatterv_intra_sched(const void *sendbuf, const int sendcounts[], const int displs[],
+                         MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                         int root, MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+#undef FUNCNAME
+#define FUNCNAME MPIR_Iscatterv_inter_sched
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Iscatterv_inter_sched(const void *sendbuf, const int sendcounts[], const int displs[],
+                         MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype,
+                         int root, MPIR_Comm *comm_ptr, MPIR_Sched_t s)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
 /* this routine handles both intracomms and intercomms */
 #undef FUNCNAME
 #define FUNCNAME MPIR_Iscatterv_sched
@@ -56,7 +94,13 @@ int MPIR_Iscatterv_sched(const void *sendbuf, const int sendcounts[], const int 
 {
     int mpi_errno = MPI_SUCCESS;
 
-    mpi_errno = MPIR_Iscatterv_linear_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        mpi_errno = MPIR_Iscatterv_intra_sched(sendbuf, sendcounts, displs, sendtype, recvbuf, recvcount, recvtype, root, comm_ptr, s);
+    } else {
+        /* intercommunicator */
+        mpi_errno = MPIR_Iscatterv_inter_sched(sendbuf, sendcounts, displs, sendtype, r    ecvbuf, recvcount, recvtype, root, comm_ptr, s);
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:

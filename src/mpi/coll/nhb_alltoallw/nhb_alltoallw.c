@@ -26,6 +26,24 @@ int MPI_Neighbor_alltoallw(const void *sendbuf, const int sendcounts[], const MP
 #undef MPI_Neighbor_alltoallw
 #define MPI_Neighbor_alltoallw PMPI_Neighbor_alltoallw
 
+#undef FUNCNAME
+#define FUNCNAME MPIR_Neighbor_alltoallw_intra
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Neighbor_alltoallw_intra(const void *sendbuf, const int sendcounts[], const int sdispls[], MPI_Datatype sendtype, void *recvbuf, const int recvcounts[], const int rdispls[], MPI_Datatype recvtype, MPIR_Comm *comm_ptr)
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Neighbor_alltoallw_nb(sendbuf, sendcounts, sdispls, sendtype, recvbuf, recvcounts, rdispls, recvtype, comm_ptr);
+
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
 /* any non-MPI functions go here, especially non-static ones */
 
 #undef FUNCNAME
@@ -36,7 +54,14 @@ int MPIR_Neighbor_alltoallw(const void *sendbuf, const int sendcounts[], const M
 {
     int mpi_errno = MPI_SUCCESS;
 
-    mpi_errno = MPIR_Neighbor_alltoallw_nb(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        mpi_errno = MPIR_Neighbor_alltoallw_intra(sendbuf, sendcounts, sdispls, sendtypes, recvbuf, recvcounts, rdispls, recvtypes, comm_ptr);
+    } else {
+        /* intercommunicator */
+        mpi_errno = MPI_ERR_OTHER;
+        goto fn_fail;
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 fn_exit:

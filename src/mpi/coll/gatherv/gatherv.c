@@ -46,6 +46,65 @@ int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void 
 */
 
 /* not declared static because it is called in intercommunicator allgatherv */
+#undef FUNCNAME
+#define FUNCNAME MPIR_Gatherv_intra
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Gatherv_intra (
+        const void *sendbuf,
+        int sendcount,
+        MPI_Datatype sendtype,
+        void *recvbuf,
+        const int *recvcounts,
+        const int *displs,
+        MPI_Datatype recvtype,
+        int root,
+        MPIR_Comm *comm_ptr,
+        MPIR_Errflag_t *errflag )
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Gatherv_linear (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    if (*errflag != MPIR_ERR_NONE)
+        MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
+/* not declared static because a machine-specific function may call this one in some cases */
+#undef FUNCNAME
+#define FUNCNAME MPIR_Gatherv_inter
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+int MPIR_Gatherv_inter (
+        const void *sendbuf,
+        int sendcount,
+        MPI_Datatype sendtype,
+        void *recvbuf,
+        const int *recvcounts,
+        const int *displs,
+        MPI_Datatype recvtype,
+        int root,
+        MPIR_Comm *comm_ptr,
+        MPIR_Errflag_t *errflag )
+{
+    int mpi_errno = MPI_SUCCESS;
+
+    mpi_errno = MPIR_Gatherv_linear (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+    if (mpi_errno) MPIR_ERR_POP(mpi_errno);
+
+fn_exit:
+    if (*errflag != MPIR_ERR_NONE)
+        MPIR_ERR_SET(mpi_errno, *errflag, "**coll_fail");
+    return mpi_errno;
+fn_fail:
+    goto fn_exit;
+}
+
 /* MPIR_Gatherv performs an gatherv using point-to-point messages.
    This is intended to be used by device-specific implementations of
    gatherv. */
@@ -67,7 +126,13 @@ int MPIR_Gatherv (
 {
     int        mpi_errno = MPI_SUCCESS;
     
-    mpi_errno = MPIR_Gatherv_linear (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+    if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
+        /* intracommunicator */
+        mpi_errno = MPIR_Gatherv_intra (sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, root, comm_ptr, errflag);
+    } else {
+        /* intercommunicator */
+        mpi_errno = MPIR_Gatherv_inter (sendbuf, sendcount, sendtype, recvbuf, recvcount    s, displs, recvtype, root, comm_ptr, errflag);
+    }
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
 
